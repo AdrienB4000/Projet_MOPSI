@@ -147,7 +147,3 @@ while(Iter<NI and S.population[NS-1].Cmax>LB):
     if proba<Pm:
         V=C1.move()
 
-
-
-
-
