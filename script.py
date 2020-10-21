@@ -1,6 +1,6 @@
 import random as rd
 import numpy as np
-
+#test de git bash
 NS = 30
 m = 3
 n = 3
