@@ -1,7 +1,7 @@
 import random as rd
 import numpy as np
 #test de git bash
-#test de github desktop
+#test 2 de github desktop
 NS = 30
 m = 3
 n = 3
@@ -90,12 +90,50 @@ class Schedule:
         C1.Cmax=np.max(C1.C)
         return C1
 
+
+    def crossover_OX(self, P2):
+        Nb=m*n
+        Taken=[False]*Nb
+        p=uniform_distribution(Nb)
+        C1=Schedule()
+        if p==0:
+            q=uniform_distribution(Nb-1)
+        else:
+            q=p+uniform_distribution(Nb-p)
+        for i in range (p, q+1):
+            C1.schedule[i]=self.schedule[i]
+            Taken[tuple_to_int(self.schedule[i])]=True
+        j=(q+1)%Nb
+        for i in range (j, j+Nb):
+            if not Taken[tuple_to_int(P2.schedule[i%Nb])]:
+                C1.schedule[j]=P2.schedule[i%Nb]
+                j=(j+1)%n
+        C1.C_computation()
+        C1.Cmax=np.max(C1.C)
+        return C1
+
+
+    def crossover_X1(self, P2):
+        Nb=m*n
+        Taken=[False]*Nb
+        q=uniform_distribution(Nb-1)
+        C1=Schedule()
+        for i in range (0, q+1):
+            C1.schedule[i]=self.schedule[i]
+            Taken[tuple_to_int(self.schedule[i])]=True
+        j=q+1
+        for i in range (Nb):
+            if not Taken[tuple_to_int(P2.schedule[i])]:
+                C1.schedule[j]=P2.schedule[i]
+                j=j+1
+        C1.C_computation()
+        C1.Cmax=np.max(C1.C)
+        return C1
+
     def move(self):
         p=uniform_distribution(m*n)
         q=1+uniform_distribution(m*n-1)
         Nb=m*n
-        print(p)
-        print(q)
         a=self.schedule[p]
         mutated=Schedule()
         mutated.schedule=self.schedule.copy()
