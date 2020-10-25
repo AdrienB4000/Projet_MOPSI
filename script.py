@@ -130,6 +130,7 @@ class Schedule:
         C1.Cmax=np.max(C1.C)
         return C1
 
+
     def move(self):
         p=uniform_distribution(m*n)
         q=1+uniform_distribution(m*n-1)
@@ -140,6 +141,23 @@ class Schedule:
         for i in range(p,p+q):
             mutated.schedule[i%Nb]=mutated.schedule[(i+1)%Nb]
         mutated.schedule[(p+q)%Nb]=a
+        mutated.C_computation()
+        mutated.Cmax=np.max(mutated.C)
+        return mutated
+
+
+    def swap(self):
+        p=uniform_distribution(m*n)
+        q=uniform_distribution(m*n-1)
+        mutated=Schedule()
+        mutated.schedule=self.schedule.copy()
+        if p==q:
+            q+=1
+        a=mutated.schedule[p]
+        mutated.schedule[p]=mutated.schedule[q]
+        mutated.schedule[q]=a
+        mutated.C_computation()
+        mutated.Cmax=np.max(mutated.C)
         return mutated
 
 
