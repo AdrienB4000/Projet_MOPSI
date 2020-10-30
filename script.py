@@ -8,14 +8,14 @@ from networkx.algorithms.clique import find_cliques
 ## LES VARIABLES GLOBALES
 
 NS = 30
-m = 5
-n = 5
+m = 4
+n = 4
 prices = np.random.randint(100, size = (m, n))
 Pm=0.2
 
 ## CREATION DU GRAPHE DE CONFLIT ET MANIPULATIONS
 
-p=0.5
+p=0.
 
 G=nx.erdos_renyi_graph(n,p)
 cliques=list(nx.algorithms.clique.find_cliques(G))
@@ -204,6 +204,7 @@ sort_functions=[lambda task : prices[task[0],task[1]],
                 lambda task : -G.degree(task[1]),
                 lambda task : G.degree(task[1])/prices[task[0],task[1]],
                 lambda task : -G.degree(task[1])/prices[task[0],task[1]]]
+#Problème si prix=0
 
 
 class Population:
@@ -254,8 +255,17 @@ while(Iter<NI and S.population[NS-1].Cmax>LB):
         C1=P1.crossover_LOX(P2)
     else:
         C1=P2.crossover_LOX(P1)
-    R=NS//2
+    R=uniform_distribution(NS//2)
     proba=rd.random()
     if proba<Pm:
         V=C1.move()
+        if not S.Used[V.Cmax-LB]:
+            C1=V
+    if not S.Used[C1.Cmax-LB]:
+        S.Used[S.population[R].Cmax-LB]=False
+        S.Used[C1.Cmax-LB]=True
+        S.population[R]=C1
+        S.population.sort(key = lambda sch : -sch.Cmax)
+        #On pourrait juste faire une insertion ordonnée!!
+
 
