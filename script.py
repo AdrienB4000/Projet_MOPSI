@@ -1,13 +1,29 @@
 import random as rd
 import numpy as np
+import networkx as nx
+from networkx.algorithms.clique import find_cliques
 #test de git bash
 #test 2 de github desktop
+
+## LES VARIABLES GLOBALES
+
 NS = 30
 m = 5
 n = 5
 prices = np.random.randint(100, size = (m, n))
-LB=max(max(prices.sum(axis=1)),max(prices.sum(axis=0)))
 Pm=0.2
+
+## CREATION DU GRAPHE DE CONFLIT ET MANIPULATIONS
+
+p=0.5
+
+G=nx.erdos_renyi_graph(n,p)
+cliques=list(nx.algorithms.clique.find_cliques(G))
+clique_max=cliques[np.argmax([len(a) for a in cliques])]
+adjacency_list=[list(G.adj[i]) for i in range(n)]
+
+
+## DEFINITION DE QUELQUES OUTILS UTILES
 
 def fitness_rank_distribution(NS):
     value=rd.random()
@@ -30,18 +46,37 @@ def uniform_distribution(NS):
 def tuple_to_int(tup):
     return tup[1]*m+tup[0]
 
+
 def int_to_tuple(integer):
     return (integer%m, integer//m)
 
 
+def calcul_LB():
+    LB_machine=max(prices.sum(axis=1))
+    jobs_prices=prices.sum(axis=0)
+    LB_jobs=max(jobs_prices)
+    LB_clique=0
+    for j in clique_max:
+        LB_clique+=jobs_prices[j]
+    return max(LB_machine, LB_jobs, LB_clique)
+
+
+LB=calcul_LB()
+
+
+## DEFINITION DES CLASSES CENTRALES
+
 class Schedule:
     """This class will we the class of the schedules which are lists
     of tuples (i,j) in [1,m]x[1,n]"""
-    def __init__(self):
+    def __init__(self, sort_function=None):
         """We create a random schedule because we won't use not random ones"""
-        rd_list=[i for i in range(m*n)]
-        rd.shuffle(rd_list)
-        self.schedule=[int_to_tuple(x) for x in rd_list]
+        task_list=[(i,j) for i in range(m) for j in range(n)]
+        if sort_function==None:
+            rd.shuffle(task_list)
+        else:
+            task_list.sort(key = sort_function)
+        self.schedule=task_list
         self.C = np.zeros((m,n), dtype=int)
         self.C_computation()
         self.Cmax=np.max(self.C)
@@ -50,6 +85,7 @@ class Schedule:
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
 
     def C_computation(self):
+        # Ceci est la représentation en liste d'adjacence du graphe de conflit
         EOM=[0]*m
         EOJ=[0]*n
         untackled_tasks=(self.schedule).copy()
@@ -64,6 +100,8 @@ class Schedule:
             self.C[u, v] = completion_time
             EOM[u] = completion_time
             EOJ[v] = completion_time
+            for j in adjacency_list[v]:
+                EOJ[j]=max(EOJ[j], EOJ[v])
             untackled_tasks.pop(index)
 
     def crossover_LOX(self, P2):
@@ -160,11 +198,26 @@ class Schedule:
         return mutated
 
 
+sort_functions=[lambda task : prices[task[0],task[1]],
+                lambda task : -prices[task[0],task[1]],
+                lambda task : G.degree(task[1]),
+                lambda task : -G.degree(task[1]),
+                lambda task : G.degree(task[1])/prices[task[0],task[1]],
+                lambda task : -G.degree(task[1])/prices[task[0],task[1]]]
+
+
 class Population:
-    def __init__(self):
+    def __init__(self, insert_sorted=False):
         self.population=[]
         k=0
         self.Used=[False]*(prices.sum()-LB+1)
+        if insert_sorted:
+            for sort_function in sort_functions:
+                s=Schedule(sort_function)
+                if not self.Used[s.Cmax-LB]:
+                    k+=1
+                    self.Used[s.Cmax-LB]=True
+                    self.population.append(s)
         NTries=0
         while (k!=NS and NTries<50):
             s=Schedule()
@@ -179,7 +232,10 @@ class Population:
         self.population.sort(key = lambda sch : -sch.Cmax)
 
 
-S = Population()
+
+## ITERATION PRINCIPALE
+
+S = Population(insert_sorted=True)
 NS = len(S.population)
 NI = 60*NS*max(m,n)
 Iter = 0
