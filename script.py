@@ -8,9 +8,10 @@ from networkx.algorithms.clique import find_cliques
 ## LES VARIABLES GLOBALES
 
 NS = 30
-m = 4
-n = 4
+m = 7
+n = 7
 prices = np.random.randint(100, size = (m, n))
+prices = np.array([[89,39,54,34,71,92,56],[19,13,81,46,91,73,27],[66,95,48,24,96,18,14],[48,46,78,94,19,68,63],[60,28,91,75,52,9,7],[33,98,37,11,2,30,38],[83,45,37,77,52,88,52]])
 Pm=0.2
 
 ## CREATION DU GRAPHE DE CONFLIT ET MANIPULATIONS
@@ -49,6 +50,15 @@ def tuple_to_int(tup):
 
 def int_to_tuple(integer):
     return (integer%m, integer//m)
+
+
+def insert_sorted_list(elmt, L, f):
+    sorted_list=[]
+    for i in range(len(L)):
+        if f(L[i])>f(elmt):
+            L.insert(i,elmt)
+            return L
+    return L+[elmt]
 
 
 def calcul_LB():
@@ -198,13 +208,19 @@ class Schedule:
         return mutated
 
 
+def tri_rapport(task):
+    if prices[task[0],task[1]]==0:
+        return 0
+    else:
+        return G.degree(task[1])/prices[task[0],task[1]]
+
+
 sort_functions=[lambda task : prices[task[0],task[1]],
                 lambda task : -prices[task[0],task[1]],
                 lambda task : G.degree(task[1]),
                 lambda task : -G.degree(task[1]),
-                lambda task : G.degree(task[1])/prices[task[0],task[1]],
-                lambda task : -G.degree(task[1])/prices[task[0],task[1]]]
-#Problème si prix=0
+                tri_rapport,
+                lambda task : -tri_rapport(task)]
 
 
 class Population:
@@ -242,6 +258,7 @@ NI = 60*NS*max(m,n)
 Iter = 0
 
 while(Iter<NI and S.population[NS-1].Cmax>LB):
+    print(Iter)
     Iter+=1
     index_p1=fitness_rank_distribution(NS)
     index_p2=uniform_distribution(NS-1)
@@ -264,8 +281,6 @@ while(Iter<NI and S.population[NS-1].Cmax>LB):
     if not S.Used[C1.Cmax-LB]:
         S.Used[S.population[R].Cmax-LB]=False
         S.Used[C1.Cmax-LB]=True
-        S.population[R]=C1
-        S.population.sort(key = lambda sch : -sch.Cmax)
-        #On pourrait juste faire une insertion ordonnée!!
+        insert_sorted_list(C1, S.population, lambda sch : -sch.Cmax)
 
 
