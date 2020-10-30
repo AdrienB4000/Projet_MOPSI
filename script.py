@@ -3,10 +3,10 @@ import numpy as np
 #test de git bash
 #test 2 de github desktop
 NS = 30
-m = 3
-n = 3
+m = 5
+n = 5
 prices = np.random.randint(100, size = (m, n))
-LB=max(prices.sum(axis=1))
+LB=max(max(prices.sum(axis=1)),max(prices.sum(axis=0)))
 Pm=0.2
 
 def fitness_rank_distribution(NS):
@@ -55,7 +55,6 @@ class Schedule:
         untackled_tasks=(self.schedule).copy()
         while untackled_tasks!=[] :
             earliest_times=[max(EOM[i], EOJ[j]) for (i,j) in untackled_tasks]
-
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             t = min(earliest_times)
@@ -165,19 +164,19 @@ class Population:
     def __init__(self):
         self.population=[]
         k=0
-        Used=[False]*(prices.sum()-LB+1)
+        self.Used=[False]*(prices.sum()-LB+1)
         NTries=0
         while (k!=NS and NTries<50):
             s=Schedule()
             NTries=1
-            while (Used[s.Cmax-LB] and NTries<50):
+            while (self.Used[s.Cmax-LB] and NTries<50):
                 s=Schedule()
                 NTries+=1
-            if not Used[s.Cmax-LB]:
+            if not self.Used[s.Cmax-LB]:
                 k+=1
                 self.population.append(s)
-                Used[s.Cmax-LB]=True
-        self.population.sort(key = lambda sch : sch.Cmax)
+                self.Used[s.Cmax-LB]=True
+        self.population.sort(key = lambda sch : -sch.Cmax)
 
 
 S = Population()
