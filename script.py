@@ -1,27 +1,27 @@
 import random as rd
 import numpy as np
 import networkx as nx
-from networkx.algorithms.clique import find_cliques
-#test de git bash
-#test 2 de github desktop
+import json
 
-## LES VARIABLES GLOBALES
+#Initialization of the instance read in the json file
 
-NS = 30
-m = 7
-n = 7
-prices = np.random.randint(100, size = (m, n))
-prices = np.array([[89,39,54,34,71,92,56],[19,13,81,46,91,73,27],[66,95,48,24,96,18,14],[48,46,78,94,19,68,63],[60,28,91,75,52,9,7],[33,98,37,11,2,30,38],[83,45,37,77,52,88,52]])
-Pm=0.2
+with open('instance.json') as instance:
+    parameters = json.load(instance)  #convert the json file into a dictionnary
 
-## CREATION DU GRAPHE DE CONFLIT ET MANIPULATIONS
+NS = parameters["nb_schedule"]
+n = parameters["nb_job"]
+m = parameters["nb_machine"]
+prices = np.array(parameters["processing_times"])
+Pm = parameters["mutation_probability"]
+if parameters["Graph"]["rand"]:
+    G = nx.erdos_renyi_graph(n, parameters["Graph"]["edge_probability"])
+else:
+    Adj_matrix = np.array(parameters["Graph"]["Adj_matrix"])
+    G = nx.from_numpy_matrix(Adj_matrix)
 
-p=0.
-
-G=nx.erdos_renyi_graph(n,p)
-cliques=list(nx.algorithms.clique.find_cliques(G))
-clique_max=cliques[np.argmax([len(a) for a in cliques])]
-adjacency_list=[list(G.adj[i]) for i in range(n)]
+cliques = list(nx.algorithms.clique.find_cliques(G))
+clique_max = cliques[np.argmax([len(a) for a in cliques])]
+adjacency_list = [list(G.adj[i]) for i in range(n)]
 
 
 ## DEFINITION DE QUELQUES OUTILS UTILES
@@ -254,7 +254,8 @@ class Population:
 
 S = Population(insert_sorted=True)
 NS = len(S.population)
-NI = 60*NS*max(m,n)
+#NI = 60*NS*max(m,n)
+NI=10
 Iter = 0
 
 while(Iter<NI and S.population[NS-1].Cmax>LB):
