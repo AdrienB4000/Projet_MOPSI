@@ -1,8 +1,0 @@
-{ 
-"nb_schedule" : 30,
-"nb_machine" : 4,
-"nb_job" : 4,
-"processing_times" : [[54,34,61,2],[9, 15, 89, 70],[38, 19, 28, 87],[95, 34, 7, 29]],
-"mutation_probability" : 0.2,
-"Graph" : {"rand" : false, "edge_probability" : 0.5, "Adj_matrix" : [[0, 0, 1, 1],[0, 0, 1, 1],[1, 1, 0, 0],[1, 1,0,0]] }
-}

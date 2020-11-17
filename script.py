@@ -5,8 +5,8 @@ import json
 
 # Initialization of the instance read in the json file
 
-with open('instance.json') as instance:
-    parameters = json.load(instance)  # convert the json file into a dictionnary
+with open('instance.txt') as instance:
+    parameters = json.load(instance)  #convert the json file into a dictionnary
 
 NbSchedules = parameters["nb_schedule"]
 NbJobs = parameters["nb_job"]
