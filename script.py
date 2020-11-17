@@ -3,289 +3,286 @@ import numpy as np
 import networkx as nx
 import json
 
-#Initialization of the instance read in the json file
+# Initialization of the instance read in the json file
 
 with open('instance.json') as instance:
-    parameters = json.load(instance)  #convert the json file into a dictionnary
+    parameters = json.load(instance)  # convert the json file into a dictionnary
 
-NS = parameters["nb_schedule"]
-n = parameters["nb_job"]
-m = parameters["nb_machine"]
-prices = np.array(parameters["processing_times"])
-Pm = parameters["mutation_probability"]
+NbSchedules = parameters["nb_schedule"]
+NbJobs = parameters["nb_job"]
+NbMachines = parameters["nb_machine"]
+ExecutionTimes = np.array(parameters["processing_times"])
+MutationProbability = parameters["mutation_probability"]
 if parameters["Graph"]["rand"]:
-    G = nx.erdos_renyi_graph(n, parameters["Graph"]["edge_probability"])
+    ConflictGraph = nx.erdos_renyi_graph(NbJobs, parameters["Graph"]["edge_probability"])
 else:
     Adj_matrix = np.array(parameters["Graph"]["Adj_matrix"])
-    G = nx.from_numpy_matrix(Adj_matrix)
+    ConflictGraph = nx.from_numpy_matrix(Adj_matrix)
 
-cliques = list(nx.algorithms.clique.find_cliques(G))
-clique_max = cliques[np.argmax([len(a) for a in cliques])]
-adjacency_list = [list(G.adj[i]) for i in range(n)]
+# DEFINITION DE QUELQUES OUTILS UTILES
 
 
-## DEFINITION DE QUELQUES OUTILS UTILES
-
-def fitness_rank_distribution(NS):
-    value=rd.random()
-    sum=0
-    for k in range(1, NS+1):
-        sum+=2*k/(NS*(NS+1))
-        if value<sum:
+def fitness_rank_distribution(number):
+    value = rd.random()
+    proba_sum = 0
+    for k in range(1, number+1):
+        proba_sum += 2*k/(number*(number+1))
+        if value < proba_sum:
             return k-1
 
 
-def uniform_distribution(NS):
-    value=rd.random()
-    sum=0
-    for k in range(NS):
-        sum+=1/NS
-        if value<sum:
+def uniform_distribution(number):
+    value = rd.random()
+    proba_sum = 0
+    for k in range(number):
+        proba_sum += 1/number
+        if value < proba_sum:
             return k
 
 
-def tuple_to_int(tup):
-    return tup[1]*m+tup[0]
+def tuple_to_int(tup, nb_machines):
+    return tup[1]*nb_machines+tup[0]
 
 
-def int_to_tuple(integer):
-    return (integer%m, integer//m)
+def int_to_tuple(integer, nb_machines):
+    return integer % nb_machines, integer//nb_machines
 
 
-def insert_sorted_list(elmt, L, f):
-    sorted_list=[]
-    for i in range(len(L)):
-        if f(L[i])>f(elmt):
-            L.insert(i,elmt)
-            return L
-    L.append(elmt)
-    return L
+def insert_sorted_list(element, sorted_list, f):
+    for i in range(len(sorted_list)):
+        if f(sorted_list[i]) > f(element):
+            sorted_list.insert(i, element)
+            return sorted_list
+    sorted_list.append(element)
+    return sorted_list
 
 
-def calcul_LB(prices, clique_max):
-    LB_machine=max(prices.sum(axis=1))
-    jobs_prices=prices.sum(axis=0)
-    LB_jobs=max(jobs_prices)
-    LB_clique=0
-    for j in clique_max:
-        LB_clique+=jobs_prices[j]
-    return max(LB_machine, LB_jobs, LB_clique)
+def lower_bound_calculus(execution_times, maximal_clique):
+    lb_machine = max(execution_times.sum(axis=1))
+    jobs_times = execution_times.sum(axis=0)
+    lb_jobs = max(execution_times.sum(axis=0))
+    lb_clique = 0
+    for j in maximal_clique:
+        lb_clique += jobs_times[j]
+    return max(lb_machine, lb_jobs, lb_clique)
 
 
-## DEFINITION DES CLASSES CENTRALES
+# DEFINITION DES CLASSES CENTRALES
 
 class Schedule:
     """This class will we the class of the schedules which are lists
     of tuples (i,j) in [1,m]x[1,n]"""
-    def __init__(self, n, m, prices, G, copying_list=None, sort_function=None):
+    def __init__(self, nb_jobs, nb_machines, executions_times, graph, copying_list=None, sort_function=None):
         """We create a schedule which is copied if a copying_list is given"""
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
-        task_list=[(i,j) for i in range(m) for j in range(n)]
-        if copying_list!=None:
-            task_list=copying_list
+        task_list = [(i, j) for i in range(nb_machines) for j in range(nb_jobs)]
+        if not (copying_list is None):
+            task_list = copying_list
         else:
-            if sort_function==None:
+            if sort_function is None:
                 rd.shuffle(task_list)
             else:
-                task_list.sort(key = sort_function)
-        self.schedule=task_list
-        self.C = np.zeros((m,n), dtype=int)
-        self.C_computation(n, m, prices, G)
-        self.Cmax=np.max(self.C)
+                task_list.sort(key=sort_function)
+        self.schedule = task_list
+        self.completion_matrix = np.zeros((nb_machines, nb_jobs), dtype=int)
+        self.completion_matrix_computation(nb_jobs, nb_machines, executions_times, graph)
+        self.Cmax = np.max(self.completion_matrix)
 
     def __str__(self):
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
 
-    def C_computation(self, n, m, prices, G):
+    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph):
         # Ceci est la représentation en liste d'adjacence du graphe de conflit
-        EOM=[0]*m
-        EOJ=[0]*n
-        adjacency_list=adjacency_list=[list(G.adj[i]) for i in range(n)]
-        untackled_tasks=(self.schedule).copy()
-        while untackled_tasks!=[] :
-            earliest_times=[max(EOM[i], EOJ[j]) for (i,j) in untackled_tasks]
+        eom = [0]*nb_machines
+        eoj = [0]*nb_jobs
+        adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
+        untackled_tasks = self.schedule.copy()
+        while untackled_tasks:
+            earliest_times = [max(eom[i], eoj[j]) for (i, j) in untackled_tasks]
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             t = min(earliest_times)
             index = np.argmin(earliest_times)
             (u, v) = untackled_tasks[index]
-            completion_time = t+prices[u, v]
-            self.C[u, v] = completion_time
-            EOM[u] = completion_time
-            EOJ[v] = completion_time
+            completion_time = t+execution_times[u, v]
+            self.completion_matrix[u, v] = completion_time
+            eom[u] = completion_time
+            eoj[v] = completion_time
             for j in adjacency_list[v]:
-                EOJ[j]=max(EOJ[j], EOJ[v])
+                eoj[j] = max(eoj[j], eoj[v])
             untackled_tasks.pop(index)
 
-    def crossover_LOX(self, n, m, prices, P2):
-        Nb=m*n
-        Taken=[False]*Nb
-        p=uniform_distribution(Nb)
-        schedule_C1=[(0,0)]*Nb
-        if p==0:
-            q=uniform_distribution(Nb-1)
+    def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        nb_tasks = nb_machines*nb_jobs
+        taken = [False]*nb_tasks
+        p = uniform_distribution(nb_tasks)
+        child_schedule = [(0, 0)]*nb_tasks
+        if p == 0:
+            q = uniform_distribution(nb_tasks-1)
         else:
-            q=p+uniform_distribution(Nb-p)
-        for i in range (p, q+1):
-            schedule_C1[i]=self.schedule[i]
-            Taken[tuple_to_int(self.schedule[i])]=True
-        j=0
-        for i in range(Nb):
-            if not Taken[tuple_to_int(P2.schedule[i])]:
-                if j==p:
-                    j=q+1
-                schedule_C1[j]=P2.schedule[i]
-                j+=1
-        C1=Schedule(n, m, prices, G, copying_list=schedule_C1)
-        return C1
+            q = p+uniform_distribution(nb_tasks-p)
+        for i in range(p, q+1):
+            child_schedule[i] = self.schedule[i]
+            taken[tuple_to_int(self.schedule[i], nb_machines)] = True
+        j = 0
+        for i in range(nb_tasks):
+            if not taken[tuple_to_int(second_parent.schedule[i], nb_machines)]:
+                if j == p:
+                    j = q+1
+                child_schedule[j] = second_parent.schedule[i]
+                j += 1
+        child = Schedule(nb_jobs, nb_machines, execution_times, graph, copying_list=child_schedule)
+        return child
 
-
-    def crossover_OX(self, n, m, prices, P2):
-        Nb=m*n
-        Taken=[False]*Nb
-        p=uniform_distribution(Nb)
-        schedule_C1=[(0,0)]*Nb
-        if p==0:
-            q=uniform_distribution(Nb-1)
+    def crossover_ox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        nb_tasks = nb_machines*nb_jobs
+        taken = [False]*nb_tasks
+        p = uniform_distribution(nb_tasks)
+        child_schedule = [(0, 0)]*nb_tasks
+        if p == 0:
+            q = uniform_distribution(nb_tasks-1)
         else:
-            q=p+uniform_distribution(Nb-p)
-        for i in range (p, q+1):
-            schedule_C1[i]=self.schedule[i]
-            Taken[tuple_to_int(self.schedule[i])]=True
-        j=(q+1)%Nb
-        for i in range (j, j+Nb):
-            if not Taken[tuple_to_int(P2.schedule[i%Nb])]:
-                schedule_C1[j]=P2.schedule[i%Nb]
-                j=(j+1)%Nb
-        C1=Schedule(n, m, prices, G, copying_list=schedule_C1)
-        return C1
+            q = p+uniform_distribution(nb_tasks-p)
+        for i in range(p, q+1):
+            child_schedule[i] = self.schedule[i]
+            taken[tuple_to_int(self.schedule[i], nb_machines)] = True
+        j = (q+1) % nb_tasks
+        for i in range(j, j+nb_tasks):
+            if not taken[tuple_to_int(second_parent.schedule[i % nb_tasks], nb_machines)]:
+                child_schedule[j] = second_parent.schedule[i % nb_tasks]
+                j = (j+1) % nb_tasks
+        children = Schedule(nb_jobs, nb_machines, execution_times, graph, copying_list=child_schedule)
+        return children
 
+    def crossover_x1(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        nb_tasks = nb_machines*nb_jobs
+        taken = [False]*nb_tasks
+        q = uniform_distribution(nb_tasks-1)
+        child_schedule = [(0, 0)]*nb_tasks
+        for i in range(0, q+1):
+            child_schedule[i] = self.schedule[i]
+            taken[tuple_to_int(self.schedule[i], nb_machines)] = True
+        j = q+1
+        for i in range(nb_tasks):
+            if not taken[tuple_to_int(second_parent.schedule[i], nb_machines)]:
+                child_schedule[j] = second_parent.schedule[i]
+                j = j+1
+        children = Schedule(nb_jobs, nb_machines, execution_times, graph, copying_list=child_schedule)
+        return children
 
-    def crossover_X1(self, n, m, prices, P2):
-        Nb=m*n
-        Taken=[False]*Nb
-        q=uniform_distribution(Nb-1)
-        schedule_C1=[(0,0)]*Nb
-        for i in range (0, q+1):
-            schedule_C1[i]=self.schedule[i]
-            Taken[tuple_to_int(self.schedule[i])]=True
-        j=q+1
-        for i in range (Nb):
-            if not Taken[tuple_to_int(P2.schedule[i])]:
-                schedule_C1[j]=P2.schedule[i]
-                j=j+1
-        C1=Schedule(n, m, prices, G, copying_list=schedule_C1)
-        return C1
+    def move(self, nb_jobs, nb_machines, execution_times, graph):
+        nb_tasks = nb_machines*nb_jobs
+        p = uniform_distribution(nb_tasks)
+        q = 1+uniform_distribution(nb_tasks-1)
+        a = self.schedule[p]
+        mutated_schedule = self.schedule.copy()
+        for i in range(p, p+q):
+            mutated_schedule[i % nb_tasks] = mutated_schedule[(i+1) % nb_tasks]
+        mutated_schedule[(p+q) % nb_tasks] = a
+        mutated = Schedule(nb_jobs, nb_machines, execution_times, graph, copying_list=mutated_schedule)
+        return mutated
 
-
-    def move(self, n, m, prices):
-        p=uniform_distribution(m*n)
-        q=1+uniform_distribution(m*n-1)
-        Nb=m*n
-        a=self.schedule[p]
-        mutated_schedule=self.schedule.copy()
-        for i in range(p,p+q):
-            mutated_schedule[i%Nb]=mutated_schedule[(i+1)%Nb]
-        mutated_schedule[(p+q)%Nb]=a
-        mutated=Schedule(n,m,prices, G, copying_list=mutated_schedule)
+    def swap(self, nb_jobs, nb_machines, execution_times, graph):
+        p = uniform_distribution(nb_machines*nb_jobs)
+        q = uniform_distribution(nb_machines*nb_jobs-1)
+        mutated_schedule = self.schedule.copy()
+        if q >= p:
+            q += 1
+        a = mutated_schedule[p]
+        mutated_schedule[p] = mutated_schedule[q]
+        mutated_schedule[q] = a
+        mutated = Schedule(nb_jobs, nb_machines, execution_times, graph, copying_list=mutated_schedule)
         return mutated
 
 
-    def swap(self, n, m, prices):
-        p=uniform_distribution(m*n)
-        q=uniform_distribution(m*n-1)
-        mutated_schedule=self.schedule.copy()
-        if q>=p:
-            q+=1
-        a=mutated_schedule[p]
-        mutated_schedule[p]=mutated_schedule[q]
-        mutated_schedule[q]=a
-        mutated=Schedule(n, m, prices, G, copying_list=mutated_schedule)
-        return mutated
-
-
-sort_functions=[lambda task : prices[task[0],task[1]],
-                lambda task : -prices[task[0],task[1]],
-                lambda task : G.degree(task[1]),
-                lambda task : -G.degree(task[1]),
-                lambda task : prices[task[0],task[1]]/(n-G.degree(task[1])),
-                lambda task : -prices[task[0],task[1]]/(n-G.degree(task[1]))]
+sort_functions = [lambda task: ExecutionTimes[task[0], task[1]],
+                  lambda task: -ExecutionTimes[task[0], task[1]],
+                  lambda task: ConflictGraph.degree(task[1]),
+                  lambda task: -ConflictGraph.degree(task[1]),
+                  lambda task: ExecutionTimes[task[0], task[1]]/(NbJobs-ConflictGraph.degree(task[1])),
+                  lambda task: -ExecutionTimes[task[0], task[1]]/(NbJobs-ConflictGraph.degree(task[1]))]
 
 
 class Population:
-    def __init__(self, n, m, prices, LB, NS=30, insert_sorted=False):
-        self.population=[]
-        k=0
-        self.Used=[False]*(prices.sum()-LB+1)
+    def __init__(self, nb_jobs, nb_machines, execution_times, graph, lower_bound, nb_schedule=30, insert_sorted=False):
+        self.population = []
+        k = 0
+        self.Used = [False]*(execution_times.sum()-lower_bound+1)
         if insert_sorted:
             for function in sort_functions:
-                s=Schedule(n, m, prices, G, sort_function=function)
-                if not self.Used[s.Cmax-LB]:
-                    k+=1
-                    self.Used[s.Cmax-LB]=True
+                s = Schedule(nb_jobs, nb_machines, execution_times, graph, sort_function=function)
+                if not self.Used[s.Cmax-lower_bound]:
+                    k += 1
+                    self.Used[s.Cmax-lower_bound] = True
                     self.population.append(s)
-        NTries=0
-        while (k!=NS and NTries<50):
-            s=Schedule(n, m, prices, G)
-            NTries=1
-            while (self.Used[s.Cmax-LB] and NTries<50):
-                s=Schedule(n, m, prices, G)
-                NTries+=1
-            if not self.Used[s.Cmax-LB]:
-                k+=1
+        n_tries = 0
+        while k != nb_schedule and n_tries < 50:
+            s = Schedule(nb_jobs, nb_machines, execution_times, graph)
+            n_tries = 1
+            while self.Used[s.Cmax-lower_bound] and n_tries < 50:
+                s = Schedule(nb_jobs, nb_machines, execution_times, graph)
+                n_tries += 1
+            if not self.Used[s.Cmax-lower_bound]:
+                k += 1
                 self.population.append(s)
-                self.Used[s.Cmax-LB]=True
-        self.population.sort(key = lambda sch : -sch.Cmax)
+                self.Used[s.Cmax-lower_bound] = True
+        self.population.sort(key=lambda sch: -sch.Cmax)
+
     def __str__(self):
         return "[" + ", ".join([str(sch) for sch in self.population]) + "]"
+
     def __repr__(self):
-        repr="Le meilleur emploi du temps est : \n"
-        repr=repr+str(self.population[len(self.population)-1])+"\n"
-        repr=repr+"Le Cmax de cet emploi du temps est " + str((self.population[len(self.population)-1]).Cmax) +"\n"
-        return repr
+        str_to_return = "Le meilleur emploi du temps est : \n"
+        str_to_return = str_to_return+str(self.population[len(self.population)-1])+"\n"
+        str_to_return = str_to_return+"Le Cmax de cet emploi du temps est "
+        str_to_return = str_to_return + str((self.population[len(self.population)-1]).Cmax) + "\n"
+        return str_to_return
 
 
+# ITERATION PRINCIPALE
 
-## ITERATION PRINCIPALE
-
-def boucle_principale(prices,n,m,NS,Pm,G):
-    cliques=list(nx.algorithms.clique.find_cliques(G))
-    clique_max=cliques[np.argmax([len(a) for a in cliques])]
-    LB=calcul_LB(prices, clique_max)
-    S=Population(n, m, prices, LB, NS, insert_sorted=True)
-    NS=len(S.population)
-    NI=60*NS*max(m,n)
-    Iter=0
-    while(Iter<NI and S.population[NS-1].Cmax>LB):
-        Iter+=1
-        index_p1=fitness_rank_distribution(NS)
-        index_p2=uniform_distribution(NS-1)
-        if (index_p1>=index_p2):
+def principal_loop(nb_jobs, nb_machines, execution_times,
+                   mutation_probability, nb_schedule, conflict_graph):
+    cliques = list(nx.algorithms.clique.find_cliques(conflict_graph))
+    clique_max = cliques[np.argmax([len(a) for a in cliques])]
+    lower_bound = lower_bound_calculus(execution_times, clique_max)
+    initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
+                                    lower_bound, nb_schedule, insert_sorted=True)
+    nb_schedule = len(initial_population.population)
+    iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
+    iteration = 0
+    while iteration < iteration_number and initial_population.population[nb_schedule-1].Cmax > lower_bound:
+        iteration += 1
+        index_p1 = fitness_rank_distribution(nb_schedule)
+        index_p2 = uniform_distribution(nb_schedule-1)
+        if index_p1 >= index_p2:
             # On décale pour atteindre tout les éléments mais pas index_p1
-            index_p2+=1
-        P1=S.population[index_p1]
-        P2=S.population[index_p2]
-        proba=rd.random()
-        if proba<=1/2:
-            C1=P1.crossover_LOX(n, m, prices, P2)
+            index_p2 += 1
+        first_parent = initial_population.population[index_p1]
+        second_parent = initial_population.population[index_p2]
+        proba = rd.random()
+        if proba <= 1/2:
+            child = first_parent.crossover_lox(nb_jobs, nb_machines, execution_times, conflict_graph, second_parent)
         else:
-            C1=P2.crossover_LOX(n, m, prices, P1)
-        proba=rd.random()
-        if proba<Pm:
-            V=C1.move(n, m, prices)
-            if not S.Used[V.Cmax-LB]:
-                C1=V
-        R=uniform_distribution(NS//2)
-        if not S.Used[C1.Cmax-LB]:
-            S.Used[S.population[R].Cmax-LB]=False
-            S.Used[C1.Cmax-LB]=True
-            S.population.pop(R)
-            insert_sorted_list(C1, S.population, lambda sch : -sch.Cmax)
-    return S
+            child = second_parent.crossover_lox(nb_jobs, nb_machines, execution_times, conflict_graph, first_parent)
+        proba = rd.random()
+        if proba < mutation_probability:
+            mutated_child = child.move(nb_jobs, nb_machines, execution_times, conflict_graph)
+            if not initial_population.Used[mutated_child.Cmax-lower_bound]:
+                child = mutated_child
+        rank_to_replace = uniform_distribution(nb_schedule//2)
+        if not initial_population.Used[child.Cmax-lower_bound]:
+            initial_population.Used[initial_population.population[rank_to_replace].Cmax-lower_bound] = False
+            initial_population.Used[child.Cmax-lower_bound] = True
+            initial_population.population.pop(rank_to_replace)
+            insert_sorted_list(child, initial_population.population, lambda sch: -sch.Cmax)
+    return initial_population
 
-if __name__=="__main__":
-    final_pop = boucle_principale(prices, n, m, NS, Pm, G)
+
+if __name__ == "__main__":
+    final_pop = principal_loop(NbJobs, NbMachines, ExecutionTimes,
+                               MutationProbability, NbSchedules, ConflictGraph)
     optimal_schedule = final_pop.population[len(final_pop.population)-1]
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
