@@ -1,12 +1,13 @@
 import random as rd
+import json
 import numpy as np
 import networkx as nx
-import json
+
 
 # Initialization of the instance read in the json file
 
 with open('instance.txt') as instance:
-    parameters = json.load(instance)  #convert the json file into a dictionnary
+    parameters = json.load(instance)  # convert the json file into a dictionnary
 
 NbSchedules = parameters["nb_schedule"]
 NbJobs = parameters["nb_job"]
@@ -19,10 +20,12 @@ else:
     Adj_matrix = np.array(parameters["Graph"]["Adj_matrix"])
     ConflictGraph = nx.from_numpy_matrix(Adj_matrix)
 
-# DEFINITION DE QUELQUES OUTILS UTILES
+# DEFINITION OF SOME USEFUL TOOLS
 
 
 def fitness_rank_distribution(number):
+    """simulates a random variable on [0,number-1] whose
+    probability is P(k)=2*(k+1)/(number*(number+1))"""
     value = rd.random()
     proba_sum = 0
     for k in range(1, number+1):
@@ -32,6 +35,7 @@ def fitness_rank_distribution(number):
 
 
 def uniform_distribution(number):
+    """simulates a uniform distribution on [0,number-1]"""
     value = rd.random()
     proba_sum = 0
     for k in range(number):
@@ -41,14 +45,17 @@ def uniform_distribution(number):
 
 
 def tuple_to_int(tup, nb_machines):
+    """converts any tuple into a number by a bijection"""
     return tup[1]*nb_machines+tup[0]
 
 
 def int_to_tuple(integer, nb_machines):
+    """the reverse conversion of tuple_to_int"""
     return integer % nb_machines, integer//nb_machines
 
 
 def insert_sorted_list(element, sorted_list, f):
+    """inserts an element in the sorted_list where f is the sorting function"""
     for i in range(len(sorted_list)):
         if f(sorted_list[i]) > f(element):
             sorted_list.insert(i, element)
@@ -58,6 +65,7 @@ def insert_sorted_list(element, sorted_list, f):
 
 
 def lower_bound_calculus(execution_times, maximal_clique):
+    """calculates the lower bound of our problem"""
     lb_machine = max(execution_times.sum(axis=1))
     jobs_times = execution_times.sum(axis=0)
     lb_jobs = max(execution_times.sum(axis=0))
@@ -67,12 +75,13 @@ def lower_bound_calculus(execution_times, maximal_clique):
     return max(lb_machine, lb_jobs, lb_clique)
 
 
-# DEFINITION DES CLASSES CENTRALES
+# DEFINITION OF THE CENTRAL CLASSES
 
 class Schedule:
     """This class will we the class of the schedules which are lists
     of tuples (i,j) in [1,m]x[1,n]"""
-    def __init__(self, nb_jobs, nb_machines, executions_times, graph, copying_list=None, sort_function=None):
+    def __init__(self, nb_jobs, nb_machines, executions_times,
+                 graph, copying_list=None, sort_function=None):
         """We create a schedule which is copied if a copying_list is given"""
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
@@ -93,6 +102,7 @@ class Schedule:
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
 
     def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph):
+        """calculates the completion matrix of a schedule"""
         # Ceci est la représentation en liste d'adjacence du graphe de conflit
         eom = [0]*nb_machines
         eoj = [0]*nb_jobs
@@ -114,6 +124,7 @@ class Schedule:
             untackled_tasks.pop(index)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        """returns the child which is the crossover between self and second parent by the lox method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
         p = uniform_distribution(nb_tasks)
@@ -136,6 +147,7 @@ class Schedule:
         return child
 
     def crossover_ox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        """returns the child which is the crossover between self and second parent by the ox method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
         p = uniform_distribution(nb_tasks)
@@ -156,6 +168,7 @@ class Schedule:
         return children
 
     def crossover_x1(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+        """returns the child which is the crossover between self and second parent by the x1 method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
         q = uniform_distribution(nb_tasks-1)
@@ -172,6 +185,7 @@ class Schedule:
         return children
 
     def move(self, nb_jobs, nb_machines, execution_times, graph):
+        """returns the mutated schedule obtained by the move method"""
         nb_tasks = nb_machines*nb_jobs
         p = uniform_distribution(nb_tasks)
         q = 1+uniform_distribution(nb_tasks-1)
@@ -184,6 +198,7 @@ class Schedule:
         return mutated
 
     def swap(self, nb_jobs, nb_machines, execution_times, graph):
+        """returns the mutated schedule obtained by the swap method"""
         p = uniform_distribution(nb_machines*nb_jobs)
         q = uniform_distribution(nb_machines*nb_jobs-1)
         mutated_schedule = self.schedule.copy()
@@ -206,6 +221,7 @@ sort_functions = [lambda task: ExecutionTimes[task[0], task[1]],
 
 class Population:
     def __init__(self, nb_jobs, nb_machines, execution_times, graph, lower_bound, nb_schedule=30, insert_sorted=False):
+        """initiates a population of nb_schedule elements (if possible) with sorted schedules if insert_sorted"""
         self.population = []
         k = 0
         self.Used = [False]*(execution_times.sum()-lower_bound+1)
@@ -240,10 +256,11 @@ class Population:
         return str_to_return
 
 
-# ITERATION PRINCIPALE
+# MAIN ITERATION
 
 def principal_loop(nb_jobs, nb_machines, execution_times,
                    mutation_probability, nb_schedule, conflict_graph):
+    """runs the principal loop of our algorithm"""
     cliques = list(nx.algorithms.clique.find_cliques(conflict_graph))
     clique_max = cliques[np.argmax([len(a) for a in cliques])]
     lower_bound = lower_bound_calculus(execution_times, clique_max)
@@ -278,12 +295,3 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
             initial_population.population.pop(rank_to_replace)
             insert_sorted_list(child, initial_population.population, lambda sch: -sch.Cmax)
     return initial_population
-
-
-if __name__ == "__main__":
-    final_pop = principal_loop(NbJobs, NbMachines, ExecutionTimes,
-                               MutationProbability, NbSchedules, ConflictGraph)
-    optimal_schedule = final_pop.population[len(final_pop.population)-1]
-    print("La valeur optimale trouvée est l'emploi du temps :")
-    print(optimal_schedule)
-    print("Dont le temps d'éxecution vaut : "+str(optimal_schedule.Cmax))
