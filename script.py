@@ -3,6 +3,10 @@ import json
 import numpy as np
 import networkx as nx
 
+# A faire : comparaisons tableaux/listes, afficher LB et matrice de completion
+# Créer nos propres instances, voir pour celles de Taillard, interface graphique??
+# Optimiser le code : une seule clique max, stocker uniquement C, insertion/suppression plus efficaces?
+
 
 # Initialization of the instance read in the json file
 
@@ -259,7 +263,7 @@ class Population:
 # MAIN ITERATION
 
 def principal_loop(nb_jobs, nb_machines, execution_times,
-                   mutation_probability, nb_schedule, conflict_graph):
+                   mutation_probability, nb_schedule, conflict_graph, proba_first_parent=0.5):
     """runs the principal loop of our algorithm"""
     cliques = list(nx.algorithms.clique.find_cliques(conflict_graph))
     clique_max = cliques[np.argmax([len(a) for a in cliques])]
@@ -270,16 +274,17 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
     iteration = 0
     while iteration < iteration_number and initial_population.population[nb_schedule-1].Cmax > lower_bound:
+        print(iteration)
         iteration += 1
         index_p1 = fitness_rank_distribution(nb_schedule)
         index_p2 = uniform_distribution(nb_schedule-1)
-        if index_p1 >= index_p2:
+        if index_p2 >= index_p1:
             # On décale pour atteindre tout les éléments mais pas index_p1
             index_p2 += 1
         first_parent = initial_population.population[index_p1]
         second_parent = initial_population.population[index_p2]
         proba = rd.random()
-        if proba <= 1/2:
+        if proba <= proba_first_parent:
             child = first_parent.crossover_lox(nb_jobs, nb_machines, execution_times, conflict_graph, second_parent)
         else:
             child = second_parent.crossover_lox(nb_jobs, nb_machines, execution_times, conflict_graph, first_parent)
@@ -295,3 +300,12 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
             initial_population.population.pop(rank_to_replace)
             insert_sorted_list(child, initial_population.population, lambda sch: -sch.Cmax)
     return initial_population
+
+
+if __name__ == "__main__":
+    final_pop = principal_loop(NbJobs, NbMachines, ExecutionTimes,
+                               MutationProbability, NbSchedules, ConflictGraph)
+    optimal_schedule = final_pop.population[len(final_pop.population) - 1]
+    print("La valeur optimale trouvée est l'emploi du temps :")
+    print(optimal_schedule)
+    print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
