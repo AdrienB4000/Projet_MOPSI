@@ -1,6 +1,6 @@
 import json
 
-instance_file = open('instances/10OSC10_1_HD1.txt', 'r')  # the instance we want to use
+instance_file = open('instances/20OSC20_1_MD1.txt', 'r')  # the instance we want to use
 lines = instance_file.readlines()
 instance_file.close()
 
@@ -16,19 +16,17 @@ processing_times = int_lines[2:2 + nb_machine]
 Adj_matrix = int_lines[2 + nb_machine:]
 
 # completing the remaining parameters
-rand = False  # if you want to use a random Erdos-Reyni Graph
-mutation_probability = 0.2
-edge_probability = 0.5
+with open('parameters.json') as parameters:
+    param = json.load(parameters)
 
 # the complete instance we store in a json file
 instance = {
-    "nb_schedule": 30,
+    "nb_schedule": param["nb_schedule"],
     "nb_machine": nb_machine,
     "nb_job": nb_job,
     "processing_times": processing_times,
-    "mutation_probability": mutation_probability,
-    "Graph": {"rand": False, "edge_probability": edge_probability, "Adj_matrix": Adj_matrix}
+    "mutation_probability": param["mutation_probability"],
+    "Graph": {"rand": param["rand_graph"], "edge_probability": param["edge_probability"], "Adj_matrix": Adj_matrix}
 }
-
-with open('instance.txt', 'w') as outfile:
+with open('instance.json', 'w') as outfile:
     json.dump(instance, outfile)

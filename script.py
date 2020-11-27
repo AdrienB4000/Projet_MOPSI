@@ -2,6 +2,7 @@ import random as rd
 import json
 import numpy as np
 import networkx as nx
+from pylab import *
 
 # A faire : comparaisons tableaux/listes, afficher LB et matrice de completion
 # Créer nos propres instances, voir pour celles de Taillard, interface graphique??
@@ -10,7 +11,7 @@ import networkx as nx
 
 # Initialization of the instance read in the json file
 
-with open('instance.txt') as instance:
+with open('instance.json') as instance:
     parameters = json.load(instance)  # convert the json file into a dictionnary
 
 NbSchedules = parameters["nb_schedule"]
@@ -104,6 +105,30 @@ class Schedule:
 
     def __str__(self):
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
+    #à améliorer, afficher le graphe à côté
+    def diagram_repr(self, best=True):
+        nb_machines=len(self.completion_matrix)
+        nb_jobs = len(self.completion_matrix[0])
+        xlabel("time")
+        ylabel("Machine m")
+        axes = gca()
+        axes.set_ylim(0, NbMachines)
+        axes.set_xlim(0, self.Cmax)
+        machine_labels = [f'm={i}' for i in range(1, nb_machines + 1)]
+        machine_ticks = [i + 0.5 for i in range(nb_machines)]
+        yticks(machine_ticks, machine_labels)
+        if best:
+            title('The best solution found')
+        else:
+            title('The real time representation of the schedule')
+        for i in range(NbMachines):
+            hlines(i, 0, self.Cmax, colors='black')
+            for j in range(nb_jobs):
+                axes.add_patch(Rectangle((self.completion_matrix[i, j] - ExecutionTimes[i, j], i), ExecutionTimes[i, j], 1,
+                                         edgecolor='black', facecolor=f'{j / nb_jobs}', fill=True))
+                text(self.completion_matrix[i, j] - ExecutionTimes[i, j] / 2, i + 0.5, f'{j + 1}', color='red',
+                     size=5 + 60/nb_machines, ha='center', va='center')
+        show()
 
     def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph):
         """calculates the completion matrix of a schedule"""
@@ -302,10 +327,13 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
     return initial_population
 
 
+
+
 if __name__ == "__main__":
     final_pop = principal_loop(NbJobs, NbMachines, ExecutionTimes,
                                MutationProbability, NbSchedules, ConflictGraph)
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
+    optimal_schedule.diagram_repr() #displays the graph in a second window
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
