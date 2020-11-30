@@ -1,6 +1,6 @@
 import json
 
-instance_file = open('instances/20OSC20_1_MD1.txt', 'r')  # the instance we want to use
+instance_file = open('instances/7OSC7_1_HD1.txt', 'r')  # the instance we want to use
 lines = instance_file.readlines()
 instance_file.close()
 

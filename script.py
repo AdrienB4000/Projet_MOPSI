@@ -1,14 +1,9 @@
 import random as rd
 import json
-import numpy as np
 import networkx as nx
 from networkx.algorithms import approximation
 from pylab import *
-
-# A faire : comparaisons tableaux/listes, afficher LB et matrice de completion
-# Créer nos propres instances, voir pour celles de Taillard, interface graphique??
-# Optimiser le code : stocker uniquement C, insertion/suppression plus efficaces?
-
+from graph import max_clique
 
 # Initialization of the instance read in the json file
 
@@ -322,12 +317,15 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
                    mutation_probability, nb_schedule, conflict_graph, proba_first_parent=0.5):
     """runs the principal loop of our algorithm"""
     clique_max = list(nx.algorithms.approximation.max_clique(conflict_graph))
+    clique_max2 = max_clique(ConflictGraph)
+    if len(clique_max2) > len(clique_max):
+        clique_max = clique_max2
     lower_bound = lower_bound_calculus(execution_times, clique_max)
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, nb_schedule, insert_sorted=True)
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
-    max_constant_iterations = 1000
+    max_constant_iterations = iteration_number/10
     iteration = 0
     compteur = 0
     Cmax = initial_population.population[len(initial_population.population) - 1]
@@ -369,14 +367,20 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
             Cmax = new_Cmax
             compteur = 0
     print(compteur, iteration, iteration_number)
-    return initial_population
+    return (initial_population,lower_bound)
 
 
 if __name__ == "__main__":
-    final_pop = principal_loop(NbJobs, NbMachines, ExecutionTimes,
+    (final_pop, lower_bound) = principal_loop(NbJobs, NbMachines, ExecutionTimes,
                                MutationProbability, NbSchedules, ConflictGraph)
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
+    clique_max = list(nx.algorithms.approximation.max_clique(ConflictGraph))
+    clique_max2 = max_clique(ConflictGraph)
+    if len(clique_max2) > len(clique_max):
+        clique_max = clique_max2
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
+    print("Avec une borne inférieure de : " + str(lower_bound))
+    print(clique_max)
     optimal_schedule.visualize()
