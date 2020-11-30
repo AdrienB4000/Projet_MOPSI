@@ -2,11 +2,12 @@ import random as rd
 import json
 import numpy as np
 import networkx as nx
+from networkx.algorithms import approximation
 from pylab import *
 
 # A faire : comparaisons tableaux/listes, afficher LB et matrice de completion
 # Créer nos propres instances, voir pour celles de Taillard, interface graphique??
-# Optimiser le code : une seule clique max, stocker uniquement C, insertion/suppression plus efficaces?
+# Optimiser le code : stocker uniquement C, insertion/suppression plus efficaces?
 
 
 # Initialization of the instance read in the json file
@@ -320,16 +321,19 @@ class Population:
 def principal_loop(nb_jobs, nb_machines, execution_times,
                    mutation_probability, nb_schedule, conflict_graph, proba_first_parent=0.5):
     """runs the principal loop of our algorithm"""
-    cliques = list(nx.algorithms.clique.find_cliques(conflict_graph))
-    clique_max = cliques[np.argmax([len(a) for a in cliques])]
+    clique_max = list(nx.algorithms.approximation.max_clique(conflict_graph))
     lower_bound = lower_bound_calculus(execution_times, clique_max)
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, nb_schedule, insert_sorted=True)
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
+    max_constant_iterations = 1000
     iteration = 0
-    while iteration < 10 and initial_population.population[nb_schedule-1].Cmax > lower_bound:
-        print(iteration)
+    compteur = 0
+    Cmax = initial_population.population[len(initial_population.population) - 1]
+    while (iteration < iteration_number and
+           initial_population.population[nb_schedule-1].Cmax > lower_bound and
+           compteur < max_constant_iterations):
         iteration += 1
         index_p1 = fitness_rank_distribution(nb_schedule)
         index_p2 = uniform_distribution(nb_schedule-1)
@@ -358,6 +362,13 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
             initial_population.population.pop(rank_to_replace)
             insert_sorted_list(
                 child, initial_population.population, lambda sch: -sch.Cmax)
+        new_Cmax = initial_population.population[len(initial_population.population) - 1]
+        if new_Cmax == Cmax:
+            compteur += 1
+        else:
+            Cmax = new_Cmax
+            compteur = 0
+    print(compteur, iteration, iteration_number)
     return initial_population
 
 
