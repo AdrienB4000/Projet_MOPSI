@@ -1,0 +1,12 @@
+number of jobs, number of machines, time seed, machine seed, upper bound, lower bound :
+           4           4   667545295   485515899         261         258
+processing times :
+ 46 59 71 62
+ 66 63 21 69
+ 63 95 45 32
+ 11 72 93 82
+machines :
+  4  3  2  1
+  1  2  3  4
+  1  3  4  2
+  1  2  4  3
