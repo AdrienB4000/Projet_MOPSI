@@ -5,6 +5,13 @@ from networkx.algorithms import approximation
 from pylab import *
 from graph import max_clique
 
+# Créer les autres engines, affiner Lower Bound avec clique de poids maximal
+# Changer la condition d'arrêt en regardant la première moitié 
+# plutôt que seulement le  en faisant renvoyer à tri_insertion le rang?
+# Passer le nom de l'instance et la définition de paramètres dans la boucle principale
+# Passage dans des fonctions les créations d'instances aussi
+# Interface avec l'utilisateur?
+
 # Initialization of the instance read in the json file
 
 with open('instance.json') as instance:
