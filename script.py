@@ -3,7 +3,7 @@ import json
 import networkx as nx
 from networkx.algorithms import approximation
 from pylab import *
-from graph import max_clique
+from graph import *
 
 # Créer les autres engines, affiner Lower Bound avec clique de poids maximal
 # Changer la condition d'arrêt en regardant la première moitié
@@ -345,7 +345,7 @@ def principal_loop(instance_file):
 
 # Compute the lower bound
     job_times = execution_times.sum(axis=0)
-    clique_max = max_weight_clique(conflict_graph, job_times)
+    clique_max = max_weight_clique(conflict_graph, list(job_times))
     lower_bound = lower_bound_calculus(execution_times, clique_max)
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, nb_schedule, insert_sorted=True)
