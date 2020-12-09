@@ -25,11 +25,11 @@ ExecutionTimes = np.array(parameters["processing_times"])
 MutationProbability = parameters["mutation_probability"]
 
 if parameters["Graph"]["rand"]:
-    ConflictGraph = nx.erdos_renyi_graph(
+    conflict_graph = nx.erdos_renyi_graph(
         NbJobs, parameters["Graph"]["edge_probability"])
 else:
     Adj_matrix = np.array(parameters["Graph"]["Adj_matrix"])
-    ConflictGraph = nx.from_numpy_matrix(Adj_matrix)
+    conflict_graph = nx.from_numpy_matrix(Adj_matrix)
 
 # DEFINITION OF SOME USEFUL TOOLS
 
@@ -122,7 +122,7 @@ class Schedule:
         labels = {}
         for i in range(NbJobs):
             labels[i] = i+1
-        nx.draw_networkx(ConflictGraph, labels=labels)
+        nx.draw_networkx(conflict_graph, labels=labels)
 
     def visuale_repr(self, best=True):
         figure(1)
@@ -271,11 +271,11 @@ class Schedule:
 
 sort_functions = [lambda task: ExecutionTimes[task[0], task[1]],
                   lambda task: -ExecutionTimes[task[0], task[1]],
-                  lambda task: ConflictGraph.degree(task[1]),
-                  lambda task: -ConflictGraph.degree(task[1]),
+                  lambda task: conflict_graph.degree(task[1]),
+                  lambda task: -conflict_graph.degree(task[1]),
                   lambda task: ExecutionTimes[task[0], task[1]
-                                              ]/(NbJobs-ConflictGraph.degree(task[1])),
-                  lambda task: -ExecutionTimes[task[0], task[1]]/(NbJobs-ConflictGraph.degree(task[1]))]
+                                              ]/(NbJobs-conflict_graph.degree(task[1])),
+                  lambda task: -ExecutionTimes[task[0], task[1]]/(NbJobs-conflict_graph.degree(task[1]))]
 
 
 class Population:
@@ -320,13 +320,32 @@ class Population:
 
 # MAIN ITERATION
 
-def principal_loop(nb_jobs, nb_machines, execution_times,
-                   mutation_probability, nb_schedule, conflict_graph, proba_first_parent=0.5):
+
+def principal_loop(instance_file):
     """runs the principal loop of our algorithm"""
-    clique_max = list(nx.algorithms.approximation.max_clique(conflict_graph))
-    clique_max2 = max_clique(ConflictGraph)
-    if len(clique_max2) > len(clique_max):
-        clique_max = clique_max2
+# Initialize parameters of the instance
+    with open(instance_file) as instance:
+        parameters = json.load(instance)
+    nb_schedule = parameters["nb_schedule"]
+    nb_jobs = parameters["nb_job"]
+    nb_machines = parameters["nb_machine"]
+    execution_times = np.array(parameters["processing_times"])
+    mutation_probability = parameters["mutation_probability"]
+    if "proba_first_parent" in parameters:
+        proba_first_parent = parameters["proba_first_parent"]
+    else:
+        proba_first_parent = 0.5
+
+    if parameters["Graph"]["rand"]:
+        conflict_graph = nx.erdos_renyi_graph(
+            nb_jobs, parameters["Graph"]["edge_probability"])
+    else:
+        conflict_graph = nx.from_numpy_matrix(
+            np.array(parameters["Graph"]["Adj_matrix"]))
+
+# Compute the lower bound
+    job_times = execution_times.sum(axis=0)
+    clique_max = max_weight_clique(conflict_graph, job_times)
     lower_bound = lower_bound_calculus(execution_times, clique_max)
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, nb_schedule, insert_sorted=True)
@@ -335,7 +354,8 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
     max_constant_iterations = iteration_number/10
     iteration = 0
     compteur = 0
-    Cmax = initial_population.population[len(initial_population.population) - 1]
+    Cmax = initial_population.population[len(
+        initial_population.population) - 1]
     while (iteration < iteration_number and
            initial_population.population[nb_schedule-1].Cmax > lower_bound and
            compteur < max_constant_iterations):
@@ -367,22 +387,22 @@ def principal_loop(nb_jobs, nb_machines, execution_times,
             initial_population.population.pop(rank_to_replace)
             insert_sorted_list(
                 child, initial_population.population, lambda sch: -sch.Cmax)
-        new_Cmax = initial_population.population[len(initial_population.population) - 1]
+        new_Cmax = initial_population.population[len(
+            initial_population.population) - 1]
         if new_Cmax == Cmax:
             compteur += 1
         else:
             Cmax = new_Cmax
             compteur = 0
     print(compteur, iteration, iteration_number)
-    return (initial_population,lower_bound)
+    return (initial_population, lower_bound)
 
 
 if __name__ == "__main__":
-    (final_pop, lower_bound) = principal_loop(NbJobs, NbMachines, ExecutionTimes,
-                               MutationProbability, NbSchedules, ConflictGraph)
+    (final_pop, lower_bound) = principal_loop("instance.json")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
-    clique_max = list(nx.algorithms.approximation.max_clique(ConflictGraph))
-    clique_max2 = max_clique(ConflictGraph)
+    clique_max = list(nx.algorithms.approximation.max_clique(conflict_graph))
+    clique_max2 = max_clique(conflict_graph)
     if len(clique_max2) > len(clique_max):
         clique_max = clique_max2
     print("La valeur optimale trouvée est l'emploi du temps :")
