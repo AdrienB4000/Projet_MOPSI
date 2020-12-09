@@ -12,24 +12,6 @@ from graph import *
 # Passage dans des fonctions les créations d'instances aussi
 # Interface avec l'utilisateur?
 
-# Initialization of the instance read in the json file
-
-with open('instance.json') as instance:
-    # convert the json file into a dictionnary
-    parameters = json.load(instance)
-
-NbSchedules = parameters["nb_schedule"]
-NbJobs = parameters["nb_job"]
-NbMachines = parameters["nb_machine"]
-ExecutionTimes = np.array(parameters["processing_times"])
-MutationProbability = parameters["mutation_probability"]
-
-if parameters["Graph"]["rand"]:
-    conflict_graph = nx.erdos_renyi_graph(
-        NbJobs, parameters["Graph"]["edge_probability"])
-else:
-    Adj_matrix = np.array(parameters["Graph"]["Adj_matrix"])
-    conflict_graph = nx.from_numpy_matrix(Adj_matrix)
 
 # DEFINITION OF SOME USEFUL TOOLS
 
@@ -41,7 +23,7 @@ def fitness_rank_distribution(number):
     proba_sum = 0
     for k in range(1, number+1):
         proba_sum += 2*k/(number*(number+1))
-        if value < proba_sum:
+        if value <= proba_sum:
             return k-1
 
 
@@ -51,7 +33,7 @@ def uniform_distribution(number):
     proba_sum = 0
     for k in range(number):
         proba_sum += 1/number
-        if value < proba_sum:
+        if value <= proba_sum:
             return k
 
 
@@ -116,22 +98,24 @@ class Schedule:
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
     # à améliorer, afficher le graphe à côté
 
-    def plot_graph(self):
+    def plot_graph(self, conflict_graph):
+        nb_machines = len(self.completion_matrix)
+        nb_jobs = len(self.completion_matrix[0])
         figure(2)
         title("Conflict graph for jobs")
         labels = {}
-        for i in range(NbJobs):
+        for i in range(nb_jobs):
             labels[i] = i+1
         nx.draw_networkx(conflict_graph, labels=labels)
 
-    def visuale_repr(self, best=True):
+    def visuale_repr(self, execution_times, best=True):
         figure(1)
         nb_machines = len(self.completion_matrix)
         nb_jobs = len(self.completion_matrix[0])
         xlabel("time")
         ylabel("Machine m")
         axes = gca()
-        axes.set_ylim(0, NbMachines)
+        axes.set_ylim(0, nb_machines)
         axes.set_xlim(0, self.Cmax)
         machine_labels = [f'm={i}' for i in range(1, nb_machines + 1)]
         machine_ticks = [i + 0.5 for i in range(nb_machines)]
@@ -140,17 +124,17 @@ class Schedule:
             title('The best solution found')
         else:
             title('The real time representation of the schedule')
-        for i in range(NbMachines):
+        for i in range(nb_machines):
             hlines(i, 0, self.Cmax, colors='black')
             for j in range(nb_jobs):
-                axes.add_patch(Rectangle((self.completion_matrix[i, j] - ExecutionTimes[i, j], i), ExecutionTimes[i, j], 1,
+                axes.add_patch(Rectangle((self.completion_matrix[i, j] - execution_times[i, j], i), execution_times[i, j], 1,
                                          edgecolor='black', facecolor=f'{j / nb_jobs}', fill=True))
-                text(self.completion_matrix[i, j] - ExecutionTimes[i, j] / 2, i + 0.5, f'{j + 1}', color='red',
+                text(self.completion_matrix[i, j] - execution_times[i, j] / 2, i + 0.5, f'{j + 1}', color='red',
                      size=5 + 60/nb_machines, ha='center', va='center')
 
-    def visualize(self):
-        self.visuale_repr()
-        self.plot_graph()
+    def visualize(self, execution_times, conflict_graph):
+        self.visuale_repr(execution_times)
+        self.plot_graph(conflict_graph)
         show()
 
     def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph):
@@ -269,35 +253,35 @@ class Schedule:
         return mutated
 
 
-sort_functions = [lambda task: ExecutionTimes[task[0], task[1]],
-                  lambda task: -ExecutionTimes[task[0], task[1]],
-                  lambda task: conflict_graph.degree(task[1]),
-                  lambda task: -conflict_graph.degree(task[1]),
-                  lambda task: ExecutionTimes[task[0], task[1]
-                                              ]/(NbJobs-conflict_graph.degree(task[1])),
-                  lambda task: -ExecutionTimes[task[0], task[1]]/(NbJobs-conflict_graph.degree(task[1]))]
-
-
 class Population:
-    def __init__(self, nb_jobs, nb_machines, execution_times, graph, lower_bound, nb_schedule=30, insert_sorted=False):
+
+    def __init__(self, nb_jobs, nb_machines, execution_times, conflict_graph, lower_bound, nb_schedule=30, insert_sorted=False):
         """initiates a population of nb_schedule elements (if possible) with sorted schedules if insert_sorted"""
         self.population = []
         k = 0
         self.Used = [False]*(execution_times.sum()-lower_bound+1)
+        sort_functions = [lambda task: execution_times[task[0], task[1]],
+                          lambda task: -execution_times[task[0], task[1]],
+                          lambda task: conflict_graph.degree(task[1]),
+                          lambda task: -conflict_graph.degree(task[1]),
+                          lambda task: execution_times[task[0], task[1]
+                                                       ]/(nb_jobs-conflict_graph.degree(task[1])),
+                          lambda task: -execution_times[task[0], task[1]]/(nb_jobs-conflict_graph.degree(task[1]))]
         if insert_sorted:
             for function in sort_functions:
                 s = Schedule(nb_jobs, nb_machines, execution_times,
-                             graph, sort_function=function)
+                             conflict_graph, sort_function=function)
                 if not self.Used[s.Cmax-lower_bound]:
                     k += 1
                     self.Used[s.Cmax-lower_bound] = True
                     self.population.append(s)
         n_tries = 0
         while k != nb_schedule and n_tries < 50:
-            s = Schedule(nb_jobs, nb_machines, execution_times, graph)
+            s = Schedule(nb_jobs, nb_machines, execution_times, conflict_graph)
             n_tries = 1
             while self.Used[s.Cmax-lower_bound] and n_tries < 50:
-                s = Schedule(nb_jobs, nb_machines, execution_times, graph)
+                s = Schedule(nb_jobs, nb_machines,
+                             execution_times, conflict_graph)
                 n_tries += 1
             if not self.Used[s.Cmax-lower_bound]:
                 k += 1
@@ -347,6 +331,9 @@ def principal_loop(instance_file):
     job_times = execution_times.sum(axis=0)
     clique_max = max_weight_clique(conflict_graph, list(job_times))
     lower_bound = lower_bound_calculus(execution_times, clique_max)
+
+# Initialize population
+
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, nb_schedule, insert_sorted=True)
     nb_schedule = len(initial_population.population)
@@ -401,13 +388,7 @@ def principal_loop(instance_file):
 if __name__ == "__main__":
     (final_pop, lower_bound) = principal_loop("instance.json")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
-    clique_max = list(nx.algorithms.approximation.max_clique(conflict_graph))
-    clique_max2 = max_clique(conflict_graph)
-    if len(clique_max2) > len(clique_max):
-        clique_max = clique_max2
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
-    print(clique_max)
-    optimal_schedule.visualize()
