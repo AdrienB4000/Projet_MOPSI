@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import networkx as nx
+from networkx.readwrite import json_graph
 
 
 # nb_jobs, nb_machines, string=LOW,MEDIUM,HARD
@@ -35,6 +36,8 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
     with open('parameters.json') as parameters:
         param = json.load(parameters)
     erdos_proba = {'LD': 0.2, 'MD': 0.5, 'HD': 0.8}
+    graph = nx.erdos_renyi_graph(nb_jobs, erdos_proba[density])
+    adjacency_matrix = nx.to_numpy_matrix(graph).tolist()
 
     instance = {
         "nb_schedule": param["nb_schedule"],
@@ -42,7 +45,7 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
         "nb_job": nb_jobs,
         "processing_times": execution_times,
         "mutation_probability": param["mutation_probability"],
-        "Graph": {"rand": True, "edge_probability": erdos_proba[density]}
+        "graph": {"rand": True, "edge_probability": erdos_proba[density], "adjacency_matrix": adjacency_matrix}
     }
 
     with open('taillard_instance.json', 'w') as outfile:

@@ -1,13 +1,9 @@
-from script import *
-import random as rd
-import json
+from script import principal_loop
 import numpy as np
-import networkx as nx
-from networkx.algorithms import approximation
-from pylab import *
 from graph import max_clique
-from create_taillard_instance import *
+from create_taillard_instance import create_taillard_instance
 import time
+import csv
 
 
 instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15), (20, 20)]
@@ -34,20 +30,20 @@ for (nb_machine, nb_job) in instance_size:
                 (optimal_schedule.Cmax-lower_bound)/lower_bound)
             if optimal_schedule.Cmax == lower_bound:
                 lb_hit += 1
-            print("La valeur optimale trouvée est l'emploi du temps : ")
-            print(optimal_schedule)
-            print("Dont le cmax vaut : " +
-                  str(optimal_schedule.Cmax))
-            print("Avec une borne inférieure de : " + str(lower_bound))
-            print("Dont la déviation de LB vaut : " +
-                  str((optimal_schedule.Cmax-lower_bound)/lower_bound))
-            print("en un temps d'exécution de " +
-                  str(execution_time[num_instance]))
+            print("La valeur optimale trouvée est l'emploi du temps : ",
+                  optimal_schedule)
+            print("Dont le cmax vaut : ", optimal_schedule.Cmax)
+            print("Avec une borne inférieure de : ", lower_bound)
+            print("Dont la déviation de LB vaut : ",
+                  (optimal_schedule.Cmax-lower_bound)/lower_bound)
+            print("en un temps d'exécution de ", execution_time[num_instance])
             if num_instance == nb_instance-1:
                 results[-1]["lb_deviation"] = np.mean(lb_deviation)
                 results[-1]["lb_hit"] = lb_hit
-                results[-1]["execution_time"] = np.mean(
-                    execution_time)
-
+                results[-1]["execution_time"] = np.mean(execution_time)
 
 print(results)
+with open('results.csv', 'w') as f:  # Just use 'w' mode in 3.x
+    w = csv.DictWriter(f, results[0].keys())
+    w.writeheader()
+    w.writerows(results)

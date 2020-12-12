@@ -99,7 +99,6 @@ class Schedule:
     # à améliorer, afficher le graphe à côté
 
     def plot_graph(self, conflict_graph):
-        nb_machines = len(self.completion_matrix)
         nb_jobs = len(self.completion_matrix[0])
         figure(2)
         title("Conflict graph for jobs")
@@ -108,16 +107,19 @@ class Schedule:
             labels[i] = i+1
         nx.draw_networkx(conflict_graph, labels=labels)
 
-    def visuale_repr(self, execution_times, best=True):
+    def visuale_repr(self, execution_times, lower_bound, best=True):
         figure(1)
         nb_machines = len(self.completion_matrix)
         nb_jobs = len(self.completion_matrix[0])
         xlabel("time")
         ylabel("Machine m")
+        axvline(x=lower_bound, color='blue')
+        text(lower_bound, nb_machines+0.5, 'Lower Bound', size=5 +
+             60/nb_machines, color='blue', ha='center', va='center')
         axes = gca()
         axes.set_ylim(0, nb_machines)
         axes.set_xlim(0, self.Cmax)
-        machine_labels = [f'm={i}' for i in range(1, nb_machines + 1)]
+        machine_labels = [f'$m_{i}$' for i in range(1, nb_machines + 1)]
         machine_ticks = [i + 0.5 for i in range(nb_machines)]
         yticks(machine_ticks, machine_labels)
         if best:
@@ -132,8 +134,8 @@ class Schedule:
                 text(self.completion_matrix[i, j] - execution_times[i, j] / 2, i + 0.5, f'{j + 1}', color='red',
                      size=5 + 60/nb_machines, ha='center', va='center')
 
-    def visualize(self, execution_times, conflict_graph):
-        self.visuale_repr(execution_times)
+    def visualize(self, execution_times, conflict_graph, lower_bound):
+        self.visuale_repr(execution_times, lower_bound)
         self.plot_graph(conflict_graph)
         show()
 
@@ -320,12 +322,8 @@ def principal_loop(instance_file):
     else:
         proba_first_parent = 0.5
 
-    if parameters["Graph"]["rand"]:
-        conflict_graph = nx.erdos_renyi_graph(
-            nb_jobs, parameters["Graph"]["edge_probability"])
-    else:
-        conflict_graph = nx.from_numpy_matrix(
-            np.array(parameters["Graph"]["Adj_matrix"]))
+    conflict_graph = nx.from_numpy_matrix(
+        np.array(parameters["graph"]["adjacency_matrix"]))
 
 # Compute the lower bound
     job_times = execution_times.sum(axis=0)
@@ -381,14 +379,21 @@ def principal_loop(instance_file):
         else:
             Cmax = new_Cmax
             compteur = 0
-    print(compteur, iteration, iteration_number)
+    print('\n Compteur : ', compteur, " Iteration : ",
+          iteration, " Nombre d'itération : ", iteration_number)
     return (initial_population, lower_bound)
 
 
 if __name__ == "__main__":
-    (final_pop, lower_bound) = principal_loop("instance.json")
+    (final_pop, lower_bound) = principal_loop("taillard_instance.json")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
+    with open("taillard_instance.json") as instance:
+        parameters = json.load(instance)
+    conflict_graph = nx.from_numpy_matrix(
+        np.array(parameters["graph"]["adjacency_matrix"]))
+    execution_times = np.array(parameters["processing_times"])
+    optimal_schedule.visualize(execution_times, conflict_graph, lower_bound)
