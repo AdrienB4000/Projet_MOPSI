@@ -4,12 +4,13 @@ import networkx as nx
 from networkx.algorithms import approximation
 from pylab import *
 from graph import *
+from math import inf
 
-# Créer les autres engines, affiner Lower Bound avec clique de poids maximal
+# Créer les autres engines, affiner Lower Bound avec clique de poids maximal OK
 # Changer la condition d'arrêt en regardant la première moitié
 # plutôt que seulement le premier en faisant renvoyer à tri_insertion le rang?
-# Passer le nom de l'instance et la définition de paramètres dans la boucle principale
-# Passage dans des fonctions les créations d'instances aussi
+# Passer le nom de l'instance et la définition de paramètres dans la boucle principale OK
+# Passage dans des fonctions les créations d'instances aussi OK
 # Interface avec l'utilisateur?
 
 # Initialization of the instance read in the json file
@@ -41,7 +42,7 @@ def fitness_rank_distribution(number):
     proba_sum = 0
     for k in range(1, number+1):
         proba_sum += 2*k/(number*(number+1))
-        if value < proba_sum:
+        if value <= proba_sum:
             return k-1
 
 
@@ -51,7 +52,7 @@ def uniform_distribution(number):
     proba_sum = 0
     for k in range(number):
         proba_sum += 1/number
-        if value < proba_sum:
+        if value <= proba_sum:
             return k
 
 
@@ -153,11 +154,9 @@ class Schedule:
         self.plot_graph()
         show()
 
-    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph):
-        """calculates the completion matrix of a schedule"""
-        # Ceci est la représentation en liste d'adjacence du graphe de conflit
-        eom = [0]*nb_machines
-        eoj = [0]*nb_jobs
+    def nd_engine(self, nb_jobs, nb_machines, execution_times, graph):
+        eom = [0] * nb_machines
+        eoj = [0] * nb_jobs
         adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
@@ -168,13 +167,74 @@ class Schedule:
             t = min(earliest_times)
             index = np.argmin(earliest_times)
             (u, v) = untackled_tasks[index]
-            completion_time = t+execution_times[u, v]
+            completion_time = t + execution_times[u, v]
             self.completion_matrix[u, v] = completion_time
             eom[u] = completion_time
             eoj[v] = completion_time
             for j in adjacency_list[v]:
                 eoj[j] = max(eoj[j], eoj[v])
             untackled_tasks.pop(index)
+
+    def giffler_engine(self, nb_jobs, nb_machines, execution_times, graph):
+        eom = [0] * nb_machines
+        eoj = [0] * nb_jobs
+        adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
+        untackled_tasks = self.schedule.copy()
+        while untackled_tasks:
+            earliest_times = [max(eom[i], eoj[j])+execution_times[i, j]
+                              for (i, j) in untackled_tasks]
+            # On parcourt la matrice C
+            # Pour toutes les taches non 0 sur C
+            t = min(earliest_times)
+            return 0
+
+    def fifo_engine(self, nb_jobs, nb_machines, execution_times, graph):
+        mg = [[(0, inf)]] * nb_machines
+        jg = [[(0, inf)]] * nb_jobs
+        for (i_machine, i_job) in self.schedule:
+            job_length = execution_times[i_machine, i_job]
+            i = 0
+            j = 0
+            while mg[i_machine][i][1]-mg[i_machine][i][0] < job_length and jg[i_job][j][1]-jg[i_job][j][0] < job_length:
+                if mg[i_machine][i][0] >= jg[i_job][j][0]:
+                    if mg[i_machine][i][1] >= jg[i_job][j][1]:
+                        j = j+1
+                    else:
+                        i = i+1
+                if jg[i_job][j][0] >= mg[i_machine][i][0]:
+                    if jg[i_job][j][1] >= mg[i_machine][i][1]:
+                        i = i+1
+                    else:
+                        j = j+1
+            t = max(mg[i_machine][i][0], jg[i_job][j][0])
+            self.completion_matrix[i_machine, i_job] = t+job_length
+            if t-mg[i_machine][i][0] == 0:
+                if mg[i_machine][i][1]-(t + job_length) == 0:
+                    mg[i_machine].pop(i)
+                else:
+                    mg[i_machine][i] = (t + job_length, mg[i_machine][i][1])
+            elif mg[i_machine][i][1]-(t + job_length) == 0:
+                mg[i_machine][i] = (mg[i_machine][i][0], t)
+            else:
+                mg[i_machine].insert(i + 1, (t + job_length, mg[i_machine][i][1]))
+                mg[i_machine][i] = (mg[i_machine][i][0], t)
+            if t-jg[i_job][j][0] == 0:
+                if jg[i_job][j][1]-(t + job_length) == 0:
+                    jg[i_job].pop(i)
+                else:
+                    jg[i_job][j] = (t + job_length, jg[i_job][j][1])
+            elif jg[i_job][j][1]-(t + job_length) == 0:
+                jg[i_job][j] = (jg[i_job][j][0], t)
+            else:
+                jg[i_job].insert(j + 1, (t + job_length, jg[i_job][j][1]))
+                jg[i_job][j] = (jg[i_job][j][0], t)
+
+    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph, engine="ND"):
+        """calculates the completion matrix of a schedule with the given engine"""
+        if engine == "ND":
+            self.nd_engine(nb_jobs, nb_machines, execution_times, graph)
+        if engine == "FIFO":
+            self.fifo_engine(nb_jobs, nb_machines, execution_times, graph)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
