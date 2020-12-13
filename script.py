@@ -172,11 +172,25 @@ class Schedule:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             t = min(earliest_times)
-            return 0
+            index = 0
+            for i, j in untackled_tasks:
+                if eom[i] < t and eoj[j] < t:
+                    u, v = i, j
+                    break
+                index += 1
+            t = max(eom[u], eoj[v])
+            completion_time = t + execution_times[u, v]
+            self.completion_matrix[u, v] = completion_time
+            eom[u] = completion_time
+            eoj[v] = completion_time
+            for j in adjacency_list[v]:
+                eoj[j] = max(eoj[j], eoj[v])
+            untackled_tasks.pop(index)
 
     def fifo_engine(self, nb_jobs, nb_machines, execution_times, graph):
         mg = [[(0, inf)]] * nb_machines
         jg = [[(0, inf)]] * nb_jobs
+        adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
         for (i_machine, i_job) in self.schedule:
             job_length = execution_times[i_machine, i_job]
             i = 0
@@ -221,6 +235,8 @@ class Schedule:
             self.nd_engine(nb_jobs, nb_machines, execution_times, graph)
         if engine == "FIFO":
             self.fifo_engine(nb_jobs, nb_machines, execution_times, graph)
+        if engine == "GIFFLER":
+            self.giffler_engine(nb_jobs, nb_machines, execution_times, graph)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
