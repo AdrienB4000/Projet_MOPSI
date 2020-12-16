@@ -6,7 +6,7 @@ import time
 import csv
 
 
-instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15), (20, 20)]
+instance_size = [(4, 4), (7, 7), (10, 10)]  # , (15, 15), (20, 20)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
 results = []

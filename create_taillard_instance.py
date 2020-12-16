@@ -55,7 +55,7 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
 
 
 if __name__ == "__main__":
-    nb_machines = 15
-    nb_jobs = 15
-    num_instance = 3
+    nb_machines = 5
+    nb_jobs = 5
+    num_instance = 4
     create_taillard_instance(nb_machines, nb_jobs, num_instance, 'LD', False)

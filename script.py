@@ -5,6 +5,7 @@ from networkx.algorithms import approximation
 from pylab import *
 from graph import *
 from math import inf
+from create_taillard_instance import create_taillard_instance
 
 # Créer les autres engines, affiner Lower Bound avec clique de poids maximal OK
 # Changer la condition d'arrêt en regardant la première moitié
@@ -26,6 +27,7 @@ def fitness_rank_distribution(number):
         proba_sum += 2*k/(number*(number+1))
         if value <= proba_sum:
             return k-1
+    return number-1
 
 
 def uniform_distribution(number):
@@ -36,6 +38,7 @@ def uniform_distribution(number):
         proba_sum += 1/number
         if value <= proba_sum:
             return k
+    return number-1
 
 
 def tuple_to_int(tup, nb_machines):
@@ -48,14 +51,16 @@ def int_to_tuple(integer, nb_machines):
     return integer % nb_machines, integer//nb_machines
 
 
-def insert_sorted_list(element, sorted_list, f):
+def insert_sorted_list(element, sorted_list, sort_f):
     """inserts an element in the sorted_list where f is the sorting function"""
-    for i in range(len(sorted_list)):
-        if f(sorted_list[i]) > f(element):
+    i=0
+    for list_elt in sorted_list:
+        if sort_f(list_elt) > sort_f(element):
             sorted_list.insert(i, element)
-            return sorted_list
+            return i
+        i += 1
     sorted_list.append(element)
-    return sorted_list
+    return i
 
 
 def lower_bound_calculus(execution_times, maximal_clique):
@@ -146,12 +151,11 @@ class Schedule:
         adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
-            earliest_times = [max(eom[i], eoj[j])
-                              for (i, j) in untackled_tasks]
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
-            t = min(earliest_times)
+            earliest_times = [max(eom[i], eoj[j]) for (i, j) in untackled_tasks]
             index = np.argmin(earliest_times)
+            t = earliest_times[index]
             (u, v) = untackled_tasks[index]
             completion_time = t + execution_times[u, v]
             self.completion_matrix[u, v] = completion_time
@@ -337,7 +341,7 @@ class Population:
         """initiates a population of nb_schedule elements (if possible) with sorted schedules if insert_sorted"""
         self.population = []
         k = 0
-        self.Used = [False]*(execution_times.sum()-lower_bound+1)
+        self.Used = {}
         sort_functions = [lambda task: execution_times[task[0], task[1]],
                           lambda task: -execution_times[task[0], task[1]],
                           lambda task: conflict_graph.degree(task[1]),
@@ -349,22 +353,30 @@ class Population:
             for function in sort_functions:
                 s = Schedule(nb_jobs, nb_machines, execution_times,
                              conflict_graph, sort_function=function)
-                if not self.Used[s.Cmax-lower_bound]:
+                if s.Cmax not in self.Used.keys():
                     k += 1
-                    self.Used[s.Cmax-lower_bound] = True
+                    self.Used[s.Cmax] = 1
                     self.population.append(s)
+                else:
+                    self.Used[s.Cmax] += 1
         n_tries = 0
-        while k != nb_schedule and n_tries < 50:
-            s = Schedule(nb_jobs, nb_machines, execution_times, conflict_graph)
-            n_tries = 1
-            while self.Used[s.Cmax-lower_bound] and n_tries < 50:
-                s = Schedule(nb_jobs, nb_machines,
-                             execution_times, conflict_graph)
-                n_tries += 1
-            if not self.Used[s.Cmax-lower_bound]:
+        while k != nb_schedule:
+            if n_tries == 50:
                 k += 1
+                n_tries = 0
+            s = Schedule(nb_jobs, nb_machines,
+                         execution_times, conflict_graph)
+            n_tries += 1
+            if s.Cmax not in self.Used.keys():
+                k += 1
+                ntries = 0
                 self.population.append(s)
-                self.Used[s.Cmax-lower_bound] = True
+                self.Used[s.Cmax] = 1
+            else:
+                self.Used[s.Cmax] += 1
+        all_cmax=[s.Cmax for s in self.population]
+        print(all_cmax)
+        print(self.Used)
         self.population.sort(key=lambda sch: -sch.Cmax)
 
     def __str__(self):
@@ -440,28 +452,28 @@ def principal_loop(instance_file):
         if proba < mutation_probability:
             mutated_child = child.move(
                 nb_jobs, nb_machines, execution_times, conflict_graph)
-            if not initial_population.Used[mutated_child.Cmax-lower_bound]:
+            if mutated_child.Cmax not in initial_population.Used:
                 child = mutated_child
         rank_to_replace = uniform_distribution(nb_schedule//2)
-        if not initial_population.Used[child.Cmax-lower_bound]:
-            initial_population.Used[initial_population.population[rank_to_replace].Cmax-lower_bound] = False
-            initial_population.Used[child.Cmax-lower_bound] = True
+        if child.Cmax not in initial_population.Used:
+            initial_population.Used.pop(initial_population.population[rank_to_replace].Cmax)
+            initial_population.Used[child.Cmax] = 1
             initial_population.population.pop(rank_to_replace)
-            insert_sorted_list(
+            replacement_index = insert_sorted_list(
                 child, initial_population.population, lambda sch: -sch.Cmax)
-        new_Cmax = initial_population.population[len(
-            initial_population.population) - 1]
-        if new_Cmax == Cmax:
-            compteur += 1
+            if replacement_index > 3*nb_schedule/4:
+                compteur = 0
+            else:
+                compteur += 1
         else:
-            Cmax = new_Cmax
-            compteur = 0
+            compteur += 1
     print('\n Compteur : ', compteur, " Iteration : ",
           iteration, " Nombre d'itération : ", iteration_number)
     return (initial_population, lower_bound)
 
 
 if __name__ == "__main__":
+    # create_taillard_instance(10, 10, 4, 'LD', True)
     (final_pop, lower_bound) = principal_loop("taillard_instance.json")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
     print("La valeur optimale trouvée est l'emploi du temps :")
@@ -474,3 +486,5 @@ if __name__ == "__main__":
         np.array(parameters["graph"]["adjacency_matrix"]))
     execution_times = np.array(parameters["processing_times"])
     optimal_schedule.visualize(execution_times, conflict_graph, lower_bound)
+    while True:
+        print(fitness_rank_distribution(5))
