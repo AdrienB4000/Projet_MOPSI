@@ -393,6 +393,7 @@ def principal_loop(instance_file):
     nb_machines = parameters["nb_machine"]
     execution_times = np.array(parameters["processing_times"])
     mutation_probability = parameters["mutation_probability"]
+    insert_sorted=parameters["insert_sorted"]
     if "proba_first_parent" in parameters:
         proba_first_parent = parameters["proba_first_parent"]
     else:
@@ -409,7 +410,7 @@ def principal_loop(instance_file):
 # Initialize population
 
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
-                                    lower_bound, nb_schedule, insert_sorted=True)
+                                    lower_bound, nb_schedule, insert_sorted)
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
     max_constant_iterations = iteration_number/10

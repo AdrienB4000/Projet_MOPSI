@@ -13,7 +13,7 @@ def priority_sort(to_sort, order_list):
     return sorted(to_sort, key=lambda e: priority[e])
 
 
-def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD"):
+def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD", insert_sorted=True):
     file_name = 'taillardInstances/tai' + \
         f'{NbMachines}_{NbJobs}_{instance_num}.txt'
     instance_file = open(file_name, 'r')  # the instance we want to use
@@ -45,6 +45,7 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
         "nb_job": nb_jobs,
         "processing_times": execution_times,
         "mutation_probability": param["mutation_probability"],
+        "insert_sorted": insert_sorted,
         "graph": {"rand": True, "edge_probability": erdos_proba[density], "adjacency_matrix": adjacency_matrix}
     }
 
@@ -54,7 +55,7 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
 
 
 if __name__ == "__main__":
-    nb_machines = 10
-    nb_jobs = 10
-    num_instance = 1
-    create_taillard_instance(nb_machines, nb_jobs, num_instance, density='MD')
+    nb_machines = 15
+    nb_jobs = 15
+    num_instance = 3
+    create_taillard_instance(nb_machines, nb_jobs, num_instance, 'LD', False)

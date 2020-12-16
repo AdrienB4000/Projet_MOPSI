@@ -30,17 +30,11 @@ for (nb_machine, nb_job) in instance_size:
                 (optimal_schedule.Cmax-lower_bound)/lower_bound)
             if optimal_schedule.Cmax == lower_bound:
                 lb_hit += 1
-            print("La valeur optimale trouvée est l'emploi du temps : ",
-                  optimal_schedule)
-            print("Dont le cmax vaut : ", optimal_schedule.Cmax)
-            print("Avec une borne inférieure de : ", lower_bound)
-            print("Dont la déviation de LB vaut : ",
-                  (optimal_schedule.Cmax-lower_bound)/lower_bound)
-            print("en un temps d'exécution de ", execution_time[num_instance])
             if num_instance == nb_instance-1:
                 results[-1]["lb_deviation"] = np.mean(lb_deviation)
                 results[-1]["lb_hit"] = lb_hit
                 results[-1]["execution_time"] = np.mean(execution_time)
+                print("Valeurs moyennes", results[-1])
 
 print(results)
 with open('results.csv', 'w') as f:  # Just use 'w' mode in 3.x
