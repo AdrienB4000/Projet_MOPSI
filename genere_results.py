@@ -5,12 +5,16 @@ from create_taillard_instance import create_taillard_instance
 import time
 import csv
 
-# terminer tester test sur  giff, fifo
-# tester 10 fois la même instance de taillard pour une taille et densité donnée
+#Remi : 
 # avoir des instances fixes donc créer le 1500 instances avant (4OSC4_1_HD2)
-# déterminer les parties qui prennent du temps
-# voir si on peut run en release au lieu de debug
+# tester 10 fois la même instance de taillard pour une taille et densité donnée
 # stocker un fichier de résultat par instance en dehors du temps d'exécution
+
+#Adrien :
+# terminer tester test sur  giff, fifo
+# déterminer les parties qui prennent du temps
+
+# voir si on peut run en release au lieu de debug (pas important)
 # refléchir à l'organisation du poster
 #
 # voir partie 5
