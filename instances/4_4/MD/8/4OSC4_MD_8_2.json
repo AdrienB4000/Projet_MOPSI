@@ -1,0 +1,1 @@
+{"nb_schedule": 30, "nb_machine": 4, "nb_job": 4, "processing_times": [[16, 81, 61, 51], [83, 90, 25, 9], [14, 19, 96, 47], [95, 21, 4, 92]], "mutation_probability": 0.2, "insert_sorted": true, "graph": {"rand": true, "edge_probability": 0.5, "adjacency_matrix": [[0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0], [0.0, 1.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]]}}

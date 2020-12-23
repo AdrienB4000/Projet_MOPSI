@@ -53,7 +53,7 @@ def int_to_tuple(integer, nb_machines):
 
 def insert_sorted_list(element, sorted_list, sort_f):
     """inserts an element in the sorted_list where f is the sorting function"""
-    i=0
+    i = 0
     for list_elt in sorted_list:
         if sort_f(list_elt) > sort_f(element):
             sorted_list.insert(i, element)
@@ -153,7 +153,8 @@ class Schedule:
         while untackled_tasks:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
-            earliest_times = [max(eom[i], eoj[j]) for (i, j) in untackled_tasks]
+            earliest_times = [max(eom[i], eoj[j])
+                              for (i, j) in untackled_tasks]
             index = np.argmin(earliest_times)
             t = earliest_times[index]
             (u, v) = untackled_tasks[index]
@@ -220,7 +221,8 @@ class Schedule:
             elif mg[i_machine][i][1]-(t + job_length) == 0:
                 mg[i_machine][i] = (mg[i_machine][i][0], t)
             else:
-                mg[i_machine].insert(i + 1, (t + job_length, mg[i_machine][i][1]))
+                mg[i_machine].insert(
+                    i + 1, (t + job_length, mg[i_machine][i][1]))
                 mg[i_machine][i] = (mg[i_machine][i][0], t)
             if t-jg[i_job][j][0] == 0:
                 if jg[i_job][j][1]-(t + job_length) == 0:
@@ -374,9 +376,9 @@ class Population:
                 self.Used[s.Cmax] = 1
             else:
                 self.Used[s.Cmax] += 1
-        all_cmax=[s.Cmax for s in self.population]
-        print(all_cmax)
-        print(self.Used)
+        all_cmax = [s.Cmax for s in self.population]
+        # print(all_cmax)
+        # print(self.Used)
         self.population.sort(key=lambda sch: -sch.Cmax)
 
     def __str__(self):
@@ -405,7 +407,7 @@ def principal_loop(instance_file):
     nb_machines = parameters["nb_machine"]
     execution_times = np.array(parameters["processing_times"])
     mutation_probability = parameters["mutation_probability"]
-    insert_sorted=parameters["insert_sorted"]
+    insert_sorted = parameters["insert_sorted"]
     if "proba_first_parent" in parameters:
         proba_first_parent = parameters["proba_first_parent"]
     else:
@@ -456,7 +458,8 @@ def principal_loop(instance_file):
                 child = mutated_child
         rank_to_replace = uniform_distribution(nb_schedule//2)
         if child.Cmax not in initial_population.Used:
-            initial_population.Used.pop(initial_population.population[rank_to_replace].Cmax)
+            initial_population.Used.pop(
+                initial_population.population[rank_to_replace].Cmax)
             initial_population.Used[child.Cmax] = 1
             initial_population.population.pop(rank_to_replace)
             replacement_index = insert_sorted_list(
