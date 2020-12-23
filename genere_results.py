@@ -14,6 +14,7 @@ import csv
 # terminer tester test sur  giff, fifo
 # déterminer les parties qui prennent du temps
 
+#Ensemble:
 # voir si on peut run en release au lieu de debug (pas important)
 # refléchir à l'organisation du poster
 #
