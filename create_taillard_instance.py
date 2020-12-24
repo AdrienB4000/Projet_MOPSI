@@ -58,4 +58,4 @@ if __name__ == "__main__":
     nb_machines = 5
     nb_jobs = 5
     num_instance = 4
-    create_taillard_instance(nb_machines, nb_jobs, num_instance, 'LD', False)
+    create_taillard_instance(nb_machines, nb_jobs, num_instance, 'HD', False)

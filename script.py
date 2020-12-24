@@ -74,6 +74,41 @@ def lower_bound_calculus(execution_times, maximal_clique):
     return max(lb_machine, lb_jobs, lb_clique)
 
 
+def pop_interval_from_interval_list(interval_list, interval):
+    """This function removes an interval from an interval list, knowing that the interval is in conflict
+    with interval (each interval is represented by a tuple of the bounds"""
+    conflict_interval_index = 0
+    length = len(interval_list)
+    # We find the interval from interval_list in conflict with the interval
+    while conflict_interval_index < length and interval_list[conflict_interval_index][1] <= interval[0]:
+        conflict_interval_index += 1
+    while conflict_interval_index < length and interval_list[conflict_interval_index][0] <= interval[1]:
+        if interval[0] > interval_list[conflict_interval_index][0]:
+            if interval[1] >= interval_list[conflict_interval_index][1]:
+                interval_list[conflict_interval_index] = interval_list[conflict_interval_index][0], interval[0]
+                conflict_interval_index += 1
+            else:
+                interval_list.insert(conflict_interval_index + 1,
+                                     (interval[1], interval_list[conflict_interval_index][1]))
+                length += 1
+                interval_list[conflict_interval_index] = interval_list[conflict_interval_index][0], interval[0]
+                conflict_interval_index += 2
+        elif interval[0] < interval_list[conflict_interval_index][0]:
+            if interval[1] >= interval_list[conflict_interval_index][1]:
+                interval_list.pop(conflict_interval_index)
+                length -= 1
+            else:
+                interval_list[conflict_interval_index] = interval[1], interval_list[conflict_interval_index][1]
+                conflict_interval_index += 1
+        else:
+            if interval[1] >= interval_list[conflict_interval_index][1]:
+                interval_list.pop(conflict_interval_index)
+                length -= 1
+            else:
+                interval_list[conflict_interval_index] = interval[1], interval_list[conflict_interval_index][1]
+                conflict_interval_index += 1
+
+
 # DEFINITION OF THE CENTRAL CLASSES
 
 class Schedule:
@@ -192,20 +227,20 @@ class Schedule:
             untackled_tasks.pop(index)
 
     def fifo_engine(self, nb_jobs, nb_machines, execution_times, graph):
-        mg = [[(0, inf)]] * nb_machines
-        jg = [[(0, inf)]] * nb_jobs
+        mg = [[(0, inf)] for _ in range(nb_machines)]
+        jg = [[(0, inf)] for _ in range(nb_machines)]
         adjacency_list = [list(graph.adj[i]) for i in range(nb_jobs)]
         for (i_machine, i_job) in self.schedule:
             job_length = execution_times[i_machine, i_job]
             i = 0
             j = 0
-            while mg[i_machine][i][1]-mg[i_machine][i][0] < job_length and jg[i_job][j][1]-jg[i_job][j][0] < job_length:
+            while min(mg[i_machine][i][1], jg[i_job][j][1])-max(mg[i_machine][i][0], jg[i_job][j][0]) < job_length:
                 if mg[i_machine][i][0] >= jg[i_job][j][0]:
                     if mg[i_machine][i][1] >= jg[i_job][j][1]:
                         j = j+1
                     else:
                         i = i+1
-                if jg[i_job][j][0] >= mg[i_machine][i][0]:
+                else:
                     if jg[i_job][j][1] >= mg[i_machine][i][1]:
                         i = i+1
                     else:
@@ -224,7 +259,7 @@ class Schedule:
                 mg[i_machine][i] = (mg[i_machine][i][0], t)
             if t-jg[i_job][j][0] == 0:
                 if jg[i_job][j][1]-(t + job_length) == 0:
-                    jg[i_job].pop(i)
+                    jg[i_job].pop(j)
                 else:
                     jg[i_job][j] = (t + job_length, jg[i_job][j][1])
             elif jg[i_job][j][1]-(t + job_length) == 0:
@@ -232,8 +267,10 @@ class Schedule:
             else:
                 jg[i_job].insert(j + 1, (t + job_length, jg[i_job][j][1]))
                 jg[i_job][j] = (jg[i_job][j][0], t)
+            for vertex in adjacency_list[i_job]:
+                pop_interval_from_interval_list(jg[vertex], (t, t+job_length))
 
-    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph, engine="ND"):
+    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph, engine="GIFFLER"):
         """calculates the completion matrix of a schedule with the given engine"""
         if engine == "ND":
             self.nd_engine(nb_jobs, nb_machines, execution_times, graph)
@@ -486,5 +523,3 @@ if __name__ == "__main__":
         np.array(parameters["graph"]["adjacency_matrix"]))
     execution_times = np.array(parameters["processing_times"])
     optimal_schedule.visualize(execution_times, conflict_graph, lower_bound)
-    while True:
-        print(fitness_rank_distribution(5))
