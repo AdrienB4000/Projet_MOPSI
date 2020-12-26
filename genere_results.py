@@ -25,7 +25,8 @@ import json
 instance_size = [(4, 4), (5, 5)]  # , (7, 7), (10, 10), (15, 15), (20, 20)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
-nb_graph = 1
+nb_graph = 10
+engine = 'ND'
 results = []
 this_dir = os.path.dirname(os.path.abspath(__file__))
 for (nb_machine, nb_job) in instance_size:
@@ -42,7 +43,7 @@ for (nb_machine, nb_job) in instance_size:
                                              f"{num_instance+1}", f"{nb_machine}OSC{nb_job}_{density}_{num_instance+1}_{num_graph+1}.json")
                 execution_time.append(time.time())
                 final_pop, lower_bound = principal_loop(
-                    instance_path)
+                    instance_path, engine)
                 execution_time[-1] = time.time() - \
                     execution_time[-1]
                 instance_result["execution_time"] = execution_time[-1]
@@ -56,16 +57,16 @@ for (nb_machine, nb_job) in instance_size:
                     instance_result["lb_hit"] = True
                 else:
                     instance_result["lb_hit"] = False
-                with open(os.path.join(this_dir, "instances", f"{nb_machine}_{nb_job}", f"{density}", f"{num_instance+1}", f"result_{nb_machine}OSC{nb_job}_{density}_{num_instance+1}_{num_graph+1}.txt"), 'w') as outfile:
+                with open(os.path.join(this_dir, "instances", f"{nb_machine}_{nb_job}", f"{density}", f"{num_instance+1}", f"result_{engine}_{nb_machine}OSC{nb_job}_{density}_{num_instance+1}_{num_graph+1}.txt"), 'w') as outfile:
                     json.dump(instance_result, outfile)
-                if num_instance*num_graph == (nb_instance-1)*(nb_graph-1):
+                if num_instance == nb_instance-1 and num_graph == nb_graph-1:
                     results[-1]["lb_deviation"] = np.mean(lb_deviation)
                     results[-1]["lb_hit"] = lb_hit
                     results[-1]["execution_time"] = np.mean(execution_time)
                     print("Valeurs moyennes", results[-1])
 
 print(results)
-# with open('results.csv', 'w') as f:  # Just use 'w' mode in 3.x
-#     w=csv.DictWriter(f, results[0].keys())
-#     w.writeheader()
-#     w.writerows(results)
+with open('results'+engine+'.csv', 'w') as f:  # Just use 'w' mode in 3.x
+    w = csv.DictWriter(f, results[0].keys())
+    w.writeheader()
+    w.writerows(results)

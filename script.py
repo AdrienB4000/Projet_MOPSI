@@ -116,7 +116,7 @@ class Schedule:
     of tuples (i,j) in [1,m]x[1,n]"""
 
     def __init__(self, nb_jobs, nb_machines, executions_times,
-                 graph, copying_list=None, sort_function=None):
+                 graph, engine, copying_list=None, sort_function=None):
         """We create a schedule which is copied if a copying_list is given"""
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
@@ -132,7 +132,7 @@ class Schedule:
         self.schedule = task_list
         self.completion_matrix = np.zeros((nb_machines, nb_jobs), dtype=int)
         self.completion_matrix_computation(
-            nb_jobs, nb_machines, executions_times, graph)
+            nb_jobs, nb_machines, executions_times, graph, engine)
         self.Cmax = np.max(self.completion_matrix)
 
     def __str__(self):
@@ -272,7 +272,7 @@ class Schedule:
             for vertex in adjacency_list[i_job]:
                 pop_interval_from_interval_list(jg[vertex], (t, t+job_length))
 
-    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph, engine="GIFFLER"):
+    def completion_matrix_computation(self, nb_jobs, nb_machines, execution_times, graph, engine):
         """calculates the completion matrix of a schedule with the given engine"""
         if engine == "ND":
             self.nd_engine(nb_jobs, nb_machines, execution_times, graph)
@@ -281,7 +281,7 @@ class Schedule:
         if engine == "GIFFLER":
             self.giffler_engine(nb_jobs, nb_machines, execution_times, graph)
 
-    def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+    def crossover_lox(self, nb_jobs, nb_machines, execution_times, graph, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
@@ -302,10 +302,10 @@ class Schedule:
                 child_schedule[j] = second_parent.schedule[i]
                 j += 1
         child = Schedule(nb_jobs, nb_machines, execution_times,
-                         graph, copying_list=child_schedule)
+                         graph, engine, copying_list=child_schedule)
         return child
 
-    def crossover_ox(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+    def crossover_ox(self, nb_jobs, nb_machines, execution_times, graph, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the ox method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
@@ -324,10 +324,10 @@ class Schedule:
                 child_schedule[j] = second_parent.schedule[i % nb_tasks]
                 j = (j+1) % nb_tasks
         children = Schedule(nb_jobs, nb_machines, execution_times,
-                            graph, copying_list=child_schedule)
+                            graph, engine, copying_list=child_schedule)
         return children
 
-    def crossover_x1(self, nb_jobs, nb_machines, execution_times, graph, second_parent):
+    def crossover_x1(self, nb_jobs, nb_machines, execution_times, graph, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the x1 method"""
         nb_tasks = nb_machines*nb_jobs
         taken = [False]*nb_tasks
@@ -342,10 +342,10 @@ class Schedule:
                 child_schedule[j] = second_parent.schedule[i]
                 j = j+1
         children = Schedule(nb_jobs, nb_machines, execution_times,
-                            graph, copying_list=child_schedule)
+                            graph, engine, copying_list=child_schedule)
         return children
 
-    def move(self, nb_jobs, nb_machines, execution_times, graph):
+    def move(self, nb_jobs, nb_machines, execution_times, graph, engine):
         """returns the mutated schedule obtained by the move method"""
         nb_tasks = nb_machines*nb_jobs
         p = uniform_distribution(nb_tasks)
@@ -356,10 +356,10 @@ class Schedule:
             mutated_schedule[i % nb_tasks] = mutated_schedule[(i+1) % nb_tasks]
         mutated_schedule[(p+q) % nb_tasks] = a
         mutated = Schedule(nb_jobs, nb_machines, execution_times,
-                           graph, copying_list=mutated_schedule)
+                           graph, engine, copying_list=mutated_schedule)
         return mutated
 
-    def swap(self, nb_jobs, nb_machines, execution_times, graph):
+    def swap(self, nb_jobs, nb_machines, execution_times, graph, engine):
         """returns the mutated schedule obtained by the swap method"""
         p = uniform_distribution(nb_machines*nb_jobs)
         q = uniform_distribution(nb_machines*nb_jobs-1)
@@ -370,13 +370,13 @@ class Schedule:
         mutated_schedule[p] = mutated_schedule[q]
         mutated_schedule[q] = a
         mutated = Schedule(nb_jobs, nb_machines, execution_times,
-                           graph, copying_list=mutated_schedule)
+                           graph, engine, copying_list=mutated_schedule)
         return mutated
 
 
 class Population:
 
-    def __init__(self, nb_jobs, nb_machines, execution_times, conflict_graph, lower_bound, nb_schedule=30, insert_sorted=False):
+    def __init__(self, nb_jobs, nb_machines, execution_times, conflict_graph, lower_bound, engine, nb_schedule=30, insert_sorted=False):
         """initiates a population of nb_schedule elements (if possible) with sorted schedules if insert_sorted"""
         self.population = []
         k = 0
@@ -391,7 +391,7 @@ class Population:
         if insert_sorted:
             for function in sort_functions:
                 s = Schedule(nb_jobs, nb_machines, execution_times,
-                             conflict_graph, sort_function=function)
+                             conflict_graph, engine, sort_function=function)
                 if s.Cmax not in self.Used.keys():
                     k += 1
                     self.Used[s.Cmax] = 1
@@ -404,7 +404,7 @@ class Population:
                 k += 1
                 n_tries = 0
             s = Schedule(nb_jobs, nb_machines,
-                         execution_times, conflict_graph)
+                         execution_times, conflict_graph, engine)
             n_tries += 1
             if s.Cmax not in self.Used.keys():
                 k += 1
@@ -434,7 +434,7 @@ class Population:
 # MAIN ITERATION
 
 
-def principal_loop(instance_file):
+def principal_loop(instance_file, engine='ND'):
     """runs the principal loop of our algorithm"""
 # Initialize parameters of the instance
     with open(instance_file) as instance:
@@ -461,14 +461,13 @@ def principal_loop(instance_file):
 # Initialize population
 
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
-                                    lower_bound, nb_schedule, insert_sorted)
+                                    lower_bound, engine, nb_schedule, insert_sorted)
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
     max_constant_iterations = iteration_number/10
     iteration = 0
     compteur = 0
-    Cmax = initial_population.population[len(
-        initial_population.population) - 1]
+    Cmax = initial_population.population[-1]
     while (iteration < iteration_number and
            initial_population.population[nb_schedule-1].Cmax > lower_bound and
            compteur < max_constant_iterations):
@@ -483,14 +482,14 @@ def principal_loop(instance_file):
         proba = rd.random()
         if proba <= proba_first_parent:
             child = first_parent.crossover_lox(
-                nb_jobs, nb_machines, execution_times, conflict_graph, second_parent)
+                nb_jobs, nb_machines, execution_times, conflict_graph, engine, second_parent)
         else:
             child = second_parent.crossover_lox(
-                nb_jobs, nb_machines, execution_times, conflict_graph, first_parent)
+                nb_jobs, nb_machines, execution_times, conflict_graph, engine, first_parent)
         proba = rd.random()
         if proba < mutation_probability:
             mutated_child = child.move(
-                nb_jobs, nb_machines, execution_times, conflict_graph)
+                nb_jobs, nb_machines, execution_times, conflict_graph, engine)
             if mutated_child.Cmax not in initial_population.Used:
                 child = mutated_child
         rank_to_replace = uniform_distribution(nb_schedule//2)
@@ -513,14 +512,15 @@ def principal_loop(instance_file):
 
 
 if __name__ == "__main__":
-    # create_taillard_instance(10, 10, 4, 'LD', True)
-    (final_pop, lower_bound) = principal_loop("taillard_instance.json")
+    instance_path = "taillard_instance_7_MD.json"
+    (final_pop, lower_bound) = principal_loop(
+        instance_path, "GIFFLER")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
     print("La valeur optimale trouvée est l'emploi du temps :")
     print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
-    with open("taillard_instance.json") as instance:
+    with open(instance_path) as instance:
         parameters = json.load(instance)
     conflict_graph = nx.from_numpy_matrix(
         np.array(parameters["graph"]["adjacency_matrix"]))
