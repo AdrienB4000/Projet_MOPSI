@@ -1,4 +1,5 @@
 import json
+import os
 import numpy as np
 import networkx as nx
 from networkx.readwrite import json_graph
@@ -13,7 +14,7 @@ def priority_sort(to_sort, order_list):
     return sorted(to_sort, key=lambda e: priority[e])
 
 
-def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD", insert_sorted=True):
+def create_taillard_instance(NbMachines=4, NbJobs=4, density="LD", instance_num=1, num_graph=1, insert_sorted=True):
     file_name = 'taillardInstances/tai' + \
         f'{NbMachines}_{NbJobs}_{instance_num}.txt'
     instance_file = open(file_name, 'r')  # the instance we want to use
@@ -48,14 +49,23 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, instance_num=1, density="LD
         "insert_sorted": insert_sorted,
         "graph": {"rand": True, "edge_probability": erdos_proba[density], "adjacency_matrix": adjacency_matrix}
     }
-
-    with open('taillard_instance.json', 'w') as outfile:
+    with open(os.path.join(this_dir, "instances", f"{nb_machine}_{nb_job}", f"{density}", f"{instance_num}", f"{NbMachines}OSC{NbJobs}_{density}_{instance_num}_{num_graph}.json"), 'w') as outfile:  # 4OSC4_1_HD2
         json.dump(instance, outfile)
     return 0
 
 
+instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15), (20, 20)]
+densities = ['LD', 'MD', 'HD']
+nb_instance = 10
+nb_graph = 10
+
 if __name__ == "__main__":
-    nb_machines = 5
-    nb_jobs = 5
-    num_instance = 4
-    create_taillard_instance(nb_machines, nb_jobs, num_instance, 'HD', False)
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    for (nb_machine, nb_job) in instance_size:
+        for density in densities:
+            for instance_num in range(nb_instance):
+                os.makedirs(os.path.join(this_dir, "instances",
+                                         f"{nb_machine}_{nb_job}", f"{density}", f"{instance_num+1}"))
+                for num_graph in range(nb_graph):
+                    create_taillard_instance(
+                        nb_machine, nb_job, density, instance_num+1, num_graph+1, True)
