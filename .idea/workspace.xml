@@ -21,11 +21,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c41f8a50-6373-4f9d-a317-b55870b2388c" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.~lock.results.csv#" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.~lock.results_archive.csv#" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/create_taillard_instance.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_taillard_instance.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/genere_results.py" beforeDir="false" afterPath="$PROJECT_DIR$/genere_results.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/script.py" beforeDir="false" afterPath="$PROJECT_DIR$/script.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/taillard_instance.json" beforeDir="false" afterPath="$PROJECT_DIR$/taillard_instance.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -6,6 +6,7 @@ from pylab import *
 from graph import *
 from math import inf
 from create_taillard_instance import create_taillard_instance
+import time
 
 # Créer les autres engines, affiner Lower Bound avec clique de poids maximal OK
 # Changer la condition d'arrêt en regardant la première moitié
@@ -398,22 +399,33 @@ class Population:
                     self.population.append(s)
                 else:
                     self.Used[s.Cmax] += 1
+                if lower_bound in self.Used.keys():
+                    self.population.sort(key=lambda sch: -sch.Cmax)
+                    return
         n_tries = 0
+        n_total = 0
         while k != nb_schedule:
             if n_tries == 50:
                 k += 1
                 n_tries = 0
             s = Schedule(nb_jobs, nb_machines,
                          execution_times, conflict_graph, engine)
+            n_total += 1
             n_tries += 1
+            if n_total > 1600:
+                print("Alerte générale : boucle infinie dans la création de population, alors qu'on est à k= ", k)
+                print("On a d'ailleurs n_tries =", n_tries)
             if s.Cmax not in self.Used.keys():
                 k += 1
-                ntries = 0
+                n_tries = 0
                 self.population.append(s)
                 self.Used[s.Cmax] = 1
             else:
                 self.Used[s.Cmax] += 1
-        all_cmax = [s.Cmax for s in self.population]
+            if lower_bound in self.Used.keys():
+                self.population.sort(key=lambda sch: -sch.Cmax)
+                return
+        # all_cmax = [s.Cmax for s in self.population]
         # print(all_cmax)
         # print(self.Used)
         self.population.sort(key=lambda sch: -sch.Cmax)
@@ -437,6 +449,8 @@ class Population:
 def principal_loop(instance_file, engine='ND'):
     """runs the principal loop of our algorithm"""
 # Initialize parameters of the instance
+    function_times = {}
+    last_time = time.time()
     with open(instance_file) as instance:
         parameters = json.load(instance)
     nb_schedule = parameters["nb_schedule"]
@@ -452,16 +466,23 @@ def principal_loop(instance_file, engine='ND'):
 
     conflict_graph = nx.from_numpy_matrix(
         np.array(parameters["graph"]["adjacency_matrix"]))
+    function_times['Parameters'] = time.time()-last_time
+    last_time = time.time()
 
 # Compute the lower bound
     job_times = execution_times.sum(axis=0)
     clique_max = max_weight_clique(conflict_graph, list(job_times))
     lower_bound = lower_bound_calculus(execution_times, clique_max)
+    function_times['Lower bound'] = time.time() - last_time
+    last_time = time.time()
 
 # Initialize population
 
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, engine, nb_schedule, insert_sorted)
+    function_times['Initialisation population'] = time.time() - last_time
+    last_time = time.time()
+
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
     max_constant_iterations = iteration_number/10
@@ -506,14 +527,16 @@ def principal_loop(instance_file, engine='ND'):
                 compteur += 1
         else:
             compteur += 1
+    function_times['Boucle principale'] = time.time() - last_time
     print('\n Compteur : ', compteur, " Iteration : ",
           iteration, " Nombre d'itération : ", iteration_number)
-    return (initial_population, lower_bound)
+    print(function_times)
+    return (initial_population, lower_bound, function_times)
 
 
 if __name__ == "__main__":
     instance_path = "taillard_instance_7_MD.json"
-    (final_pop, lower_bound) = principal_loop(
+    (final_pop, lower_bound, function_times) = principal_loop(
         instance_path, "GIFFLER")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
     print("La valeur optimale trouvée est l'emploi du temps :")

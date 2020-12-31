@@ -1,0 +1,1 @@
+{"execution_time": 1.7017199993133545, "lb_deviation": 0.024922118380062305, "lb_hit": false}
