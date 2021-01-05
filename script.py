@@ -7,6 +7,7 @@ from graph import *
 from math import inf
 from create_taillard_instance import create_taillard_instance
 import time
+import os
 
 # Créer les autres engines, affiner Lower Bound avec clique de poids maximal OK
 # Changer la condition d'arrêt en regardant la première moitié
@@ -121,6 +122,7 @@ class Schedule:
         """We create a schedule which is copied if a copying_list is given"""
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
+        self.completion_time = 0
         task_list = [(i, j) for i in range(nb_machines)
                      for j in range(nb_jobs)]
         if not (copying_list is None):
@@ -131,10 +133,12 @@ class Schedule:
             else:
                 task_list.sort(key=sort_function)
         self.schedule = task_list
+        beg_time = time.time()
         self.completion_matrix = np.zeros((nb_machines, nb_jobs), dtype=int)
         self.completion_matrix_computation(
             nb_jobs, nb_machines, executions_times, graph, engine)
         self.Cmax = np.max(self.completion_matrix)
+        self.completion_time = time.time()-beg_time
 
     def __str__(self):
         return "[" + ", ".join([str(task) for task in self.schedule]) + "]"
@@ -189,9 +193,9 @@ class Schedule:
         while untackled_tasks:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
-            earliest_times = [max(eom[i], eoj[j])
+            earliest_times = [max(eom[i], eoj[j])  # 50 % de l'algorithme
                               for (i, j) in untackled_tasks]
-            index = np.argmin(earliest_times)
+            index = np.argmin(earliest_times)  # 25 % de l'algorithme
             t = earliest_times[index]
             (u, v) = untackled_tasks[index]
             completion_time = t + execution_times[u, v]
@@ -199,7 +203,7 @@ class Schedule:
             eom[u] = completion_time
             eoj[v] = completion_time
             for j in adjacency_list[v]:
-                eoj[j] = max(eoj[j], eoj[v])
+                eoj[j] = max(eoj[j], eoj[v])    # 10 % de l'algorithme
             untackled_tasks.pop(index)
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, graph):
@@ -288,6 +292,7 @@ class Schedule:
         taken = [False]*nb_tasks
         p = uniform_distribution(nb_tasks)
         child_schedule = [(0, 0)]*nb_tasks
+
         if p == 0:
             q = uniform_distribution(nb_tasks-1)
         else:
@@ -382,6 +387,7 @@ class Population:
         self.population = []
         k = 0
         self.Used = {}
+        self.completion_time = 0
         sort_functions = [lambda task: execution_times[task[0], task[1]],
                           lambda task: -execution_times[task[0], task[1]],
                           lambda task: conflict_graph.degree(task[1]),
@@ -413,7 +419,8 @@ class Population:
             n_total += 1
             n_tries += 1
             if n_total > 1600:
-                print("Alerte générale : boucle infinie dans la création de population, alors qu'on est à k= ", k)
+                print(
+                    "Alerte générale : boucle infinie dans la création de population, alors qu'on est à k= ", k)
                 print("On a d'ailleurs n_tries =", n_tries)
             if s.Cmax not in self.Used.keys():
                 k += 1
@@ -428,6 +435,7 @@ class Population:
         # all_cmax = [s.Cmax for s in self.population]
         # print(all_cmax)
         # print(self.Used)
+        #print(" nb essai pop initiale : ", n_total)
         self.population.sort(key=lambda sch: -sch.Cmax)
 
     def __str__(self):
@@ -466,23 +474,22 @@ def principal_loop(instance_file, engine='ND'):
 
     conflict_graph = nx.from_numpy_matrix(
         np.array(parameters["graph"]["adjacency_matrix"]))
-    function_times['Parameters'] = time.time()-last_time
+    function_times['parameters'] = time.time()-last_time
     last_time = time.time()
 
 # Compute the lower bound
     job_times = execution_times.sum(axis=0)
     clique_max = max_weight_clique(conflict_graph, list(job_times))
     lower_bound = lower_bound_calculus(execution_times, clique_max)
-    function_times['Lower bound'] = time.time() - last_time
+    function_times['lower_bound'] = time.time() - last_time
     last_time = time.time()
 
 # Initialize population
 
     initial_population = Population(nb_jobs, nb_machines, execution_times, conflict_graph,
                                     lower_bound, engine, nb_schedule, insert_sorted)
-    function_times['Initialisation population'] = time.time() - last_time
+    function_times['init_population'] = time.time() - last_time
     last_time = time.time()
-
     nb_schedule = len(initial_population.population)
     iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
     max_constant_iterations = iteration_number/10
@@ -504,13 +511,16 @@ def principal_loop(instance_file, engine='ND'):
         if proba <= proba_first_parent:
             child = first_parent.crossover_lox(
                 nb_jobs, nb_machines, execution_times, conflict_graph, engine, second_parent)
+            initial_population.completion_time += child.completion_time
         else:
             child = second_parent.crossover_lox(
                 nb_jobs, nb_machines, execution_times, conflict_graph, engine, first_parent)
+            initial_population.completion_time += child.completion_time
         proba = rd.random()
         if proba < mutation_probability:
             mutated_child = child.move(
                 nb_jobs, nb_machines, execution_times, conflict_graph, engine)
+            initial_population.completion_time += mutated_child.completion_time
             if mutated_child.Cmax not in initial_population.Used:
                 child = mutated_child
         rank_to_replace = uniform_distribution(nb_schedule//2)
@@ -527,20 +537,23 @@ def principal_loop(instance_file, engine='ND'):
                 compteur += 1
         else:
             compteur += 1
-    function_times['Boucle principale'] = time.time() - last_time
+    function_times['principal_loop'] = time.time() - last_time
     print('\n Compteur : ', compteur, " Iteration : ",
-          iteration, " Nombre d'itération : ", iteration_number)
+          iteration, " Nombre d'itération maximal : ", iteration_number)
     print(function_times)
+    print('temps de calcul la matrice de completion : ',
+          initial_population.completion_time)
     return (initial_population, lower_bound, function_times)
 
 
 if __name__ == "__main__":
-    instance_path = "taillard_instance_7_MD.json"
+    instance_path = os.path.join(
+        "instances", "10_10", "MD", "7", "10OSC10_MD_7_6.json")
     (final_pop, lower_bound, function_times) = principal_loop(
-        instance_path, "GIFFLER")
+        instance_path, "ND")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
-    print("La valeur optimale trouvée est l'emploi du temps :")
-    print(optimal_schedule)
+    # print("La valeur optimale trouvée est l'emploi du temps :")
+    # print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
     with open(instance_path) as instance:

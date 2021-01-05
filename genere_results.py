@@ -45,9 +45,10 @@ for (nb_machine, nb_job) in instance_size:
     for density in densities:
         d = {}
         results.append(
-            {"instance_size": (nb_machine, nb_job), "density": density})
+            {"instance_size": f"{nb_machine};{nb_job}", "density": density})
         lb_deviation = []
         lb_hit = 0
+        res_function_times = []
         execution_time = []
         cumulated_function_times = {}
         for num_instance in range(nb_instance):
@@ -68,23 +69,24 @@ for (nb_machine, nb_job) in instance_size:
                     (optimal_schedule.Cmax-lower_bound)/lower_bound)
                 instance_result["lb_deviation"] = lb_deviation[-1]
                 if optimal_schedule.Cmax == lower_bound:
-                    lb_hit += 1
                     instance_result["lb_hit"] = True
+                    lb_hit += instance_result["lb_hit"]
                 else:
                     instance_result["lb_hit"] = False
+                instance_result["function_times"] = function_times
                 with open(os.path.join(this_dir, "instances", f"{nb_machine}_{nb_job}", f"{density}", f"{num_instance+1}", f"result_{engine}_{nb_machine}OSC{nb_job}_{density}_{num_instance+1}_{num_graph+1}.txt"), 'w') as outfile:
                     json.dump(instance_result, outfile)
-                if num_instance == nb_instance-1 and num_graph == nb_graph-1:
-                    results[-1]["lb_deviation"] = np.mean(lb_deviation)
-                    results[-1]["lb_hit"] = lb_hit
-                    results[-1]["execution_time"] = np.mean(execution_time)
-                    print("Valeurs moyennes", results[-1])
-                    cumulated_function_times = {k: v / (nb_graph*nb_instance)
-                                                for k, v in cumulated_function_times.items()}
-                    print("Temps des différentes parties en moyenne :", cumulated_function_times)
+        results[-1]["lb_deviation"] = np.mean(lb_deviation)
+        results[-1]["lb_hit"] = lb_hit
+        results[-1]["execution_time"] = np.mean(execution_time)
+        print("Valeurs moyennes", results[-1])
+        cumulated_function_times = {k: v / (nb_graph*nb_instance)
+                                    for k, v in cumulated_function_times.items()}
+        print("Temps des différentes parties en moyenne :",
+              cumulated_function_times)
 
 print(results)
-with open('results'+engine+'.csv', 'w') as f:  # Just use 'w' mode in 3.x
+with open('results'+engine+'test.csv', 'w') as f:  # Just use 'w' mode in 3.x
     w = csv.DictWriter(f, results[0].keys())
     w.writeheader()
     w.writerows(results)
