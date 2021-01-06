@@ -1,1 +1,1 @@
-{"execution_time": 0.021976709365844727, "lb_deviation": 0.0, "lb_hit": true, "function_times": {"parameters": 0.010800838470458984, "lower_bound": 0.0, "init_population": 0.0018305778503417969, "principal_loop": 0.0}}
+{"execution_time": 0.026001453399658203, "lb_deviation": 0.0, "lb_hit": true, "function_times": {"parameters": 0.001001596450805664, "lower_bound": 0.0010037422180175781, "init_population": 0.0009984970092773438, "principal_loop": 0.0}}

@@ -13,14 +13,29 @@ import json
 # stocker un fichier de résultat par instance en dehors du temps d'exécution
 
 # Adrien :
-# terminer tester test sur  giff, fifo
+# terminer tester   giff, fifo
 # déterminer les parties qui prennent du temps
 
 # Ensemble:
-# voir si on peut run en release au lieu de debug (pas important)
+# voir si on peut run en release au lieu de debug
 # refléchir à l'organisation du poster
 #
 # voir partie 5
+
+# A étudier:
+# On ne voit pas comment améliorer la complexité de notre algo qui ne dépend que du calcul de C et donc de l'heuristique
+# par conséquent nous ne pouvons pas générer nos résultats en 10 h (il faut donc diminuer voir pour diminuer la quantité d'instances)
+# Quel format pour le poster, sur quel outil ?
+
+# Poster : introduction sur pq ce pb se pose (pb d'ordonancement ultra classique dans l'industrie ou ailleurs,
+# schéma d'un pb pour que le lecteur comprenne (trouver un ex qui se schématise bien, qu'on utilise tout au long ou pas)
+# Spécificité de l'open shop avec les conflits (schéma avec les autre pb d'ordonnancement)
+# Présentation des algorithmes génétiques en général ou directement notre algo ?
+# Est ce qu'on présente la génération de la population initiale,les mutations,
+#  les crossovers, les 3 heuristiques, les conditions d'arrêts ?
+# Présentation du rendu graphique
+# Amélioration de notre algorithme
+# Présentation des résultats (tableau)
 
 
 def merge_two_dicts(d1, d2):
@@ -34,11 +49,11 @@ def merge_two_dicts(d1, d2):
             d1[key] = d2[key]
 
 
-instance_size = [(4, 4), (5, 5), (7, 7)]  # , (10, 10), (15, 15), (20, 20)]
+instance_size = [(10, 10)]  # , (20, 20)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
 nb_graph = 10
-engine = 'ND'
+engine = 'GIFFLER'
 results = []
 this_dir = os.path.dirname(os.path.abspath(__file__))
 for (nb_machine, nb_job) in instance_size:
@@ -48,7 +63,6 @@ for (nb_machine, nb_job) in instance_size:
             {"instance_size": f"{nb_machine};{nb_job}", "density": density})
         lb_deviation = []
         lb_hit = 0
-        res_function_times = []
         execution_time = []
         cumulated_function_times = {}
         for num_instance in range(nb_instance):
