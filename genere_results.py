@@ -65,7 +65,7 @@ for (nb_machine, nb_job) in instance_size:
     for density in densities:
         d = {}
         results.append(
-            {"instance_size": f"{nb_machine};{nb_job}", "density": density})
+            {"instance_size": f"({nb_machine},{nb_job})", "density": density})
         lb_deviation = []
         lb_hit = 0
         execution_time = []
@@ -106,6 +106,6 @@ for (nb_machine, nb_job) in instance_size:
 
 print(results)
 with open('results'+engine+'test.csv', 'w') as f:  # Just use 'w' mode in 3.x
-    w = csv.DictWriter(f, results[0].keys())
+    w = csv.DictWriter(f, results[0].keys(), delimiter=";")
     w.writeheader()
     w.writerows(results)
