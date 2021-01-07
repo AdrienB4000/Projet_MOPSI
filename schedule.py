@@ -87,6 +87,7 @@ class Schedule:
         while untackled_tasks:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
+            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
             earliest_times = [max(eom[i], eoj[j])
                               for (i, j) in untackled_tasks]  # 50 % de l'algorithme (9 s)
             index = np.argmin(earliest_times)  # 25 % de l'algorithme  (4 s)
@@ -122,6 +123,7 @@ class Schedule:
         #     untackled_tasks.remove((u, v))
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+        # a modifier de la même façon
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()

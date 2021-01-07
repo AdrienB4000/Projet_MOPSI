@@ -37,6 +37,11 @@ import json
 # Amélioration de notre algorithme
 # Présentation des résultats (tableau)
 
+# A retenir
+# Modifier la prise en compte des paramètres pour les lire 1 fois et pas 1500 fois
+# Tenter de modifier la fonction ND engine
+# faire des stats sur les heuristiques
+
 
 def merge_two_dicts(d1, d2):
     """adds d2 to d1"""
