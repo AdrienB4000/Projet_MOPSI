@@ -6,6 +6,7 @@ from pylab import *
 from graph import *
 from math import inf
 from tools import *
+import json
 
 
 class Schedule:
@@ -81,6 +82,7 @@ class Schedule:
         show()
 
     def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+        last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
@@ -88,18 +90,15 @@ class Schedule:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-            earliest_times = [max(eom[i], eoj[j])
-                              for (i, j) in untackled_tasks]  # 50 % de l'algorithme (9 s)
-            index = np.argmin(earliest_times)  # 25 % de l'algorithme  (4 s)
-            t = earliest_times[index]
-            (u, v) = untackled_tasks[index]
-            completion_time = t + execution_times[u, v]
-            self.completion_matrix[u, v] = completion_time
-            eom[u] = completion_time
-            eoj[v] = completion_time
-            for j in adjacency_list[v]:
-                eoj[j] = max(eoj[j], eoj[v])    # 10 % de l'algorithme (1 s)
+            argmin_m, argmin_j, t, index = min_time(eom, eoj, untackled_tasks)
+            completion_time = t + execution_times[argmin_m, argmin_j]
+            self.completion_matrix[argmin_m, argmin_j] = completion_time
+            eom[argmin_m] = completion_time
+            eoj[argmin_j] = completion_time
+            for j in adjacency_list[argmin_j]:
+                eoj[j] = max(eoj[j], eoj[argmin_j])
             untackled_tasks.pop(index)
+        print("Temps dans le engine ND", time.time()-last_time)
 
         # Version qui fonctionne mais un peu plus coûteuse :(
         # untackled_tasks = self.schedule.copy()
@@ -121,6 +120,25 @@ class Schedule:
 
         #     times[u, v] = np.inf
         #     untackled_tasks.remove((u, v))
+
+    def nd_engine_2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+        last_time = time.time()
+        eom = [0] * nb_machines
+        eoj = [0] * nb_jobs
+        untackled_tasks = self.schedule.copy()
+        while untackled_tasks:
+            # On parcourt la matrice C
+            # Pour toutes les taches non 0 sur C
+            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
+            argmin_m, argmin_j, t, index = min_time(eom, eoj, untackled_tasks)
+            completion_time = t + execution_times[argmin_m, argmin_j]
+            self.completion_matrix[argmin_m, argmin_j] = completion_time
+            eom[argmin_m] = completion_time
+            eoj[argmin_j] = completion_time
+            for j in adjacency_list[argmin_j]:
+                eoj[j] = max(eoj[j], eoj[argmin_j])
+            untackled_tasks.pop(index)
+        print("Temps dans le engine ND2", time.time()-last_time)
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         # a modifier de la même façon
@@ -197,6 +215,8 @@ class Schedule:
         if engine == "ND":
             self.nd_engine(nb_jobs, nb_machines,
                            execution_times, adjacency_list)
+        if engine == "ND2":
+            self.nd_engine_2(nb_jobs, nb_machines, execution_times, adjacency_list)
         if engine == "FIFO":
             self.fifo_engine(nb_jobs, nb_machines,
                              execution_times, adjacency_list)
@@ -296,3 +316,18 @@ class Schedule:
         mutated = Schedule(nb_jobs, nb_machines, execution_times,
                            adjacency_list, engine, copying_list=mutated_schedule)
         return mutated
+
+
+if __name__ == "__main__":
+    instance_path = os.path.join(
+        "instances", "10_10", "MD", "7", "10OSC10_MD_7_6.json")
+    with open(instance_path) as instance:
+        parameters = json.load(instance)
+    nb_jobs = parameters["nb_job"]
+    nb_machines = parameters["nb_machine"]
+    execution_times = np.array(parameters["processing_times"])
+    conflict_graph = nx.from_numpy_matrix(
+        np.array(parameters["graph"]["adjacency_matrix"]))
+    adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
+    s = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ND")
+    s2 = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ND2", copying_list=s.schedule)
