@@ -13,28 +13,27 @@ from schedule import Schedule
 from population import Population
 
 
-def principal_loop(instance_file, engine='ND'):
+def principal_loop(instance_file, parameters, engine='ND'):
     """runs the principal loop of our algorithm"""
 # Initialize parameters of the instance
     function_times = {}
     last_time = time.time()
-    with open(instance_file) as instance:
-        parameters = json.load(instance)
-    nb_schedule = parameters["nb_schedule"]
-    nb_jobs = parameters["nb_job"]
-    nb_machines = parameters["nb_machine"]
-    execution_times = np.array(parameters["processing_times"])
     mutation_probability = parameters["mutation_probability"]
+    nb_schedule = parameters["nb_schedule"]
     insert_sorted = parameters["insert_sorted"]
-    if "proba_first_parent" in parameters:
-        proba_first_parent = parameters["proba_first_parent"]
-    else:
-        proba_first_parent = 0.5
+    proba_first_parent = parameters["proba_first_parent"]
+
+    with open(instance_file) as inst:
+        instance = json.load(inst)
+
+    nb_jobs = instance["nb_job"]
+    nb_machines = instance["nb_machine"]
+    execution_times = np.array(instance["processing_times"])
 
     conflict_graph = nx.from_numpy_matrix(
-        np.array(parameters["graph"]["adjacency_matrix"]))
+        np.array(instance["graph"]["adjacency_matrix"]))
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
-    function_times['parameters'] = time.time()-last_time
+    function_times['instance'] = time.time()-last_time
     last_time = time.time()
 
 # Compute the lower bound
@@ -106,18 +105,20 @@ def principal_loop(instance_file, engine='ND'):
 
 
 if __name__ == "__main__":
+    with open("parameters.json") as param:
+        parameters = json.load(param)
     instance_path = os.path.join(
         "instances", "10_10", "MD", "7", "10OSC10_MD_7_6.json")
     (final_pop, lower_bound, function_times) = principal_loop(
-        instance_path, "GIFFLER")
+        instance_path, parameters, "ND")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
     # print("La valeur optimale trouvée est l'emploi du temps :")
     # print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
-    with open(instance_path) as instance:
-        parameters = json.load(instance)
+    with open(instance_path) as inst:
+        instance = json.load(inst)
     conflict_graph = nx.from_numpy_matrix(
-        np.array(parameters["graph"]["adjacency_matrix"]))
-    execution_times = np.array(parameters["processing_times"])
+        np.array(instance["graph"]["adjacency_matrix"]))
+    execution_times = np.array(instance["processing_times"])
     optimal_schedule.visualize(execution_times, conflict_graph, lower_bound)

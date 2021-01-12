@@ -7,24 +7,6 @@ import csv
 import os
 import json
 
-# Remi :
-# bien écrire dans le csv
-# tester 10 fois la même instance de taillard pour une taille et densité donnée
-# stocker un fichier de résultat par instance en dehors du temps d'exécution
-
-# Adrien :
-# terminer tester   giff, fifo
-# déterminer les parties qui prennent du temps
-
-# Ensemble:
-# voir si on peut run en release au lieu de debug
-# refléchir à l'organisation du poster
-#
-# voir partie 5
-
-# A étudier:
-# On ne voit pas comment améliorer la complexité de notre algo qui ne dépend que du calcul de C et donc de l'heuristique
-# par conséquent nous ne pouvons pas générer nos résultats en 10 h (il faut donc diminuer voir pour diminuer la quantité d'instances)
 # Quel format pour le poster, sur quel outil ?
 
 # Poster : introduction sur pq ce pb se pose (pb d'ordonancement ultra classique dans l'industrie ou ailleurs,
@@ -38,9 +20,12 @@ import json
 # Présentation des résultats (tableau)
 
 # A retenir
-# Modifier la prise en compte des paramètres pour les lire 1 fois et pas 1500 fois
-# Tenter de modifier la fonction ND engine
+# Faire tourner l'algo et faire un beau csv de résultat avec les
 # faire des stats sur les heuristiques
+# faire varier les paramètres de l'algo
+# ex d'applications : classe/profs
+# Poster : tracer des courbes de déviations, pseudo-code avec rpz de ce que donne les algos
+# Lire partie 5
 
 
 def merge_two_dicts(d1, d2):
@@ -58,14 +43,17 @@ instance_size = [(10, 10)]  # , (20, 20)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
 nb_graph = 10
-engine = 'GIFFLER'
+engine = 'ND'
 results = []
 this_dir = os.path.dirname(os.path.abspath(__file__))
+with open("parameters.json") as param:
+    parameters = json.load(param)
+
 for (nb_machine, nb_job) in instance_size:
     for density in densities:
         d = {}
         results.append(
-            {"instance_size": f"({nb_machine},{nb_job})", "density": density})
+            {"instance_size": (nb_machine, nb_job), "density": density})
         lb_deviation = []
         lb_hit = 0
         execution_time = []
@@ -77,7 +65,7 @@ for (nb_machine, nb_job) in instance_size:
                                              f"{num_instance+1}", f"{nb_machine}OSC{nb_job}_{density}_{num_instance+1}_{num_graph+1}.json")
                 execution_time.append(time.time())
                 final_pop, lower_bound, function_times = principal_loop(
-                    instance_path, engine)
+                    instance_path, parameters, engine)
                 execution_time[-1] = time.time() - \
                     execution_time[-1]
                 merge_two_dicts(cumulated_function_times, function_times)
@@ -105,7 +93,7 @@ for (nb_machine, nb_job) in instance_size:
               cumulated_function_times)
 
 print(results)
-with open('results'+engine+'test.csv', 'w') as f:  # Just use 'w' mode in 3.x
+with open('results'+engine+'test1010.csv', 'w') as f:  # Just use 'w' mode in 3.x
     w = csv.DictWriter(f, results[0].keys(), delimiter=";")
     w.writeheader()
     w.writerows(results)

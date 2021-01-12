@@ -82,7 +82,7 @@ class Schedule:
         show()
 
     def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
-        last_time = time.time()
+        #last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
@@ -98,7 +98,7 @@ class Schedule:
             for j in adjacency_list[argmin_j]:
                 eoj[j] = max(eoj[j], eoj[argmin_j])
             untackled_tasks.pop(index)
-        print("Temps dans le engine ND", time.time()-last_time)
+        #print("Temps dans le engine ND", time.time()-last_time)
 
         # Version qui fonctionne mais un peu plus coûteuse :(
         # untackled_tasks = self.schedule.copy()
@@ -216,7 +216,8 @@ class Schedule:
             self.nd_engine(nb_jobs, nb_machines,
                            execution_times, adjacency_list)
         if engine == "ND2":
-            self.nd_engine_2(nb_jobs, nb_machines, execution_times, adjacency_list)
+            self.nd_engine_2(nb_jobs, nb_machines,
+                             execution_times, adjacency_list)
         if engine == "FIFO":
             self.fifo_engine(nb_jobs, nb_machines,
                              execution_times, adjacency_list)
@@ -330,4 +331,5 @@ if __name__ == "__main__":
         np.array(parameters["graph"]["adjacency_matrix"]))
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
     s = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ND")
-    s2 = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ND2", copying_list=s.schedule)
+    s2 = Schedule(nb_jobs, nb_machines, execution_times,
+                  adjacency_list, "ND2", copying_list=s.schedule)

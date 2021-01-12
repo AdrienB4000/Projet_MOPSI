@@ -1,1 +1,1 @@
-{"nb_schedule" : 30, "mutation_probability" : 0.2, "edge_probability" : 0.5, "rand_graph" : false}
+{"nb_schedule" : 30, "mutation_probability" : 0.2, "insert_sorted":true, "proba_first_parent":0.5}

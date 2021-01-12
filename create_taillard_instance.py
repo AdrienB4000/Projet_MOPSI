@@ -14,7 +14,7 @@ def priority_sort(to_sort, order_list):
     return sorted(to_sort, key=lambda e: priority[e])
 
 
-def create_taillard_instance(NbMachines=4, NbJobs=4, density="LD", instance_num=1, num_graph=1, insert_sorted=True):
+def create_taillard_instance(NbMachines=4, NbJobs=4, density="LD", instance_num=1, num_graph=1):
     file_name = 'taillardInstances/tai' + \
         f'{NbMachines}_{NbJobs}_{instance_num}.txt'
     instance_file = open(file_name, 'r')  # the instance we want to use
@@ -34,19 +34,14 @@ def create_taillard_instance(NbMachines=4, NbJobs=4, density="LD", instance_num=
     execution_times = (np.transpose(execution_times)).tolist()
 
     # completing the remaining parameters
-    with open('parameters.json') as parameters:
-        param = json.load(parameters)
     erdos_proba = {'LD': 0.2, 'MD': 0.5, 'HD': 0.8}
     graph = nx.erdos_renyi_graph(nb_jobs, erdos_proba[density])
     adjacency_matrix = nx.to_numpy_matrix(graph).tolist()
 
     instance = {
-        "nb_schedule": param["nb_schedule"],
         "nb_machine": nb_machines,
         "nb_job": nb_jobs,
         "processing_times": execution_times,
-        "mutation_probability": param["mutation_probability"],
-        "insert_sorted": insert_sorted,
         "graph": {"rand": True, "edge_probability": erdos_proba[density], "adjacency_matrix": adjacency_matrix}
     }
     with open(os.path.join(this_dir, "instances", f"{nb_machine}_{nb_job}", f"{density}", f"{instance_num}", f"{NbMachines}OSC{NbJobs}_{density}_{instance_num}_{num_graph}.json"), 'w') as outfile:  # 4OSC4_1_HD2
@@ -68,4 +63,4 @@ if __name__ == "__main__":
                                          f"{nb_machine}_{nb_job}", f"{density}", f"{instance_num+1}"))
                 for num_graph in range(nb_graph):
                     create_taillard_instance(
-                        nb_machine, nb_job, density, instance_num+1, num_graph+1, True)
+                        nb_machine, nb_job, density, instance_num+1, num_graph+1)
