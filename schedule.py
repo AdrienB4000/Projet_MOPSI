@@ -81,7 +81,7 @@ class Schedule:
         self.plot_graph(conflict_graph)
         show()
 
-    def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+    def nd_engine2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         #last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
@@ -121,7 +121,7 @@ class Schedule:
         #     times[u, v] = np.inf
         #     untackled_tasks.remove((u, v))
 
-    def nd_engine_2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+    def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
@@ -130,7 +130,8 @@ class Schedule:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-            argmin_m, argmin_j, t, index = min_time(eom, eoj, untackled_tasks)
+            argmin_m, argmin_j, t, index = min_time_to_begin(
+                eom, eoj, untackled_tasks)
             completion_time = t + execution_times[argmin_m, argmin_j]
             self.completion_matrix[argmin_m, argmin_j] = completion_time
             eom[argmin_m] = completion_time
@@ -138,7 +139,7 @@ class Schedule:
             for j in adjacency_list[argmin_j]:
                 eoj[j] = max(eoj[j], eoj[argmin_j])
             untackled_tasks.pop(index)
-        print("Temps dans le engine ND2", time.time()-last_time)
+        #print("Temps dans le engine ND", time.time()-last_time)
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         # a modifier de la même façon
@@ -146,14 +147,39 @@ class Schedule:
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
-            earliest_times = [max(eom[i], eoj[j])+execution_times[i, j]
+            # On parcourt la matrice C
+            # Pour toutes les taches non 0 sur C
+            argmin_m, argmin_j, t, index = min_time_to_finish(
+                eom, eoj, untackled_tasks, execution_times)
+            index = 0
+            for i, j in untackled_tasks:
+                if eom[i] <= t and eoj[j] <= t:
+                    u, v = i, j
+                    break
+                index += 1
+            t = max(eom[u], eoj[v])
+            completion_time = t + execution_times[u, v]
+            self.completion_matrix[u, v] = completion_time
+            eom[u] = completion_time
+            eoj[v] = completion_time
+            for j in adjacency_list[v]:
+                eoj[j] = max(eoj[j], eoj[v])
+            untackled_tasks.pop(index)
+
+    def ancien_giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+        # a modifier de la même façon
+        eom = [0] * nb_machines
+        eoj = [0] * nb_jobs
+        untackled_tasks = self.schedule.copy()
+        while untackled_tasks:
+            earliest_times = [max(eom[i], eoj[j]) + execution_times[i, j]
                               for (i, j) in untackled_tasks]
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             t = min(earliest_times)
             index = 0
             for i, j in untackled_tasks:
-                if eom[i] < t and eoj[j] < t:
+                if eom[i] <= t and eoj[j] <= t:
                     u, v = i, j
                     break
                 index += 1
@@ -224,6 +250,9 @@ class Schedule:
         if engine == "GIFFLER":
             self.giffler_engine(nb_jobs, nb_machines,
                                 execution_times, adjacency_list)
+        if engine == "ANCIEN_GIFFLER":
+            self.ancien_giffler_engine(nb_jobs, nb_machines,
+                                       execution_times, adjacency_list)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, adjacency_list, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
@@ -330,6 +359,13 @@ if __name__ == "__main__":
     conflict_graph = nx.from_numpy_matrix(
         np.array(parameters["graph"]["adjacency_matrix"]))
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
-    s = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ND")
+    job_times = execution_times.sum(axis=0)
+    clique_max = max_weight_clique(conflict_graph, list(job_times))
+    s = Schedule(nb_jobs, nb_machines, execution_times,
+                 adjacency_list, "GIFFLER")
     s2 = Schedule(nb_jobs, nb_machines, execution_times,
-                  adjacency_list, "ND2", copying_list=s.schedule)
+                  adjacency_list, "ANCIEN_GIFFLER")
+    s.visualize(execution_times, conflict_graph,
+                lower_bound_calculus(execution_times, clique_max))
+    s2.visualize(execution_times, conflict_graph,
+                 lower_bound_calculus(execution_times, clique_max))

@@ -9,16 +9,6 @@ import json
 
 # Quel format pour le poster, sur quel outil ?
 
-# Poster : introduction sur pq ce pb se pose (pb d'ordonancement ultra classique dans l'industrie ou ailleurs,
-# schéma d'un pb pour que le lecteur comprenne (trouver un ex qui se schématise bien, qu'on utilise tout au long ou pas)
-# Spécificité de l'open shop avec les conflits (schéma avec les autre pb d'ordonnancement)
-# Présentation des algorithmes génétiques en général ou directement notre algo ?
-# Est ce qu'on présente la génération de la population initiale,les mutations,
-#  les crossovers, les 3 heuristiques, les conditions d'arrêts ?
-# Présentation du rendu graphique
-# Amélioration de notre algorithme
-# Présentation des résultats (tableau)
-
 # A retenir
 # Faire tourner l'algo et faire un beau csv de résultat avec les
 # faire des stats sur les heuristiques
@@ -39,11 +29,11 @@ def merge_two_dicts(d1, d2):
             d1[key] = d2[key]
 
 
-instance_size = [(10, 10)]  # , (20, 20)]
+instance_size = [(4, 4), (5, 5), (7, 7)]  # (15, 15)]  # , (20, 20)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
 nb_graph = 10
-engine = 'ND'
+engine = 'FIFO'
 results = []
 this_dir = os.path.dirname(os.path.abspath(__file__))
 with open("parameters.json") as param:
@@ -93,7 +83,7 @@ for (nb_machine, nb_job) in instance_size:
               cumulated_function_times)
 
 print(results)
-with open('results'+engine+'test1010.csv', 'w') as f:  # Just use 'w' mode in 3.x
+with open('results'+engine+'_test.csv', 'w') as f:  # Just use 'w' mode in 3.x
     w = csv.DictWriter(f, results[0].keys(), delimiter=";")
     w.writeheader()
     w.writerows(results)

@@ -100,7 +100,7 @@ def principal_loop(instance_file, parameters, engine='ND'):
     print('\n Compteur : ', compteur, " Iteration : ",
           iteration, " Nombre d'itération maximal : ", iteration_number)
     print(function_times)
-    print("Temps de calcul total de C : ", initial_population.completion_time)
+    #print("Temps de calcul total de C : ", initial_population.completion_time)
     return (initial_population, lower_bound, function_times)
 
 
