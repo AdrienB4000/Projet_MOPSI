@@ -102,7 +102,7 @@ def pop_interval_from_interval_list(interval_list, interval):
                 conflict_interval_index += 1
 
 
-def min_time(eom, eoj, untackled_tasks):
+def min_time_to_begin(eom, eoj, untackled_tasks):
     """Calculates the indexes i and j which minimizes (max(eom[i], eoj[j]))"""
     """We have to go in the order of untackled_tasks"""
     arg_m, arg_j = untackled_tasks[0]
@@ -114,6 +114,23 @@ def min_time(eom, eoj, untackled_tasks):
             arg_m = m
             arg_j = j
             min_t = max(eom[m], eoj[j])
+            index = i
+        i += 1
+    return arg_m, arg_j, min_t, index
+
+
+def min_time_to_finish(eom, eoj, untackled_tasks, execution_times):
+    """Calculates the indexes i and j which minimizes (max(eom[i], eoj[j])+execution_times[i,j])"""
+    """We have to go in the order of untackled_tasks"""
+    arg_m, arg_j = untackled_tasks[0]
+    index = 0
+    min_t = max(eom[arg_m], eoj[arg_j])+execution_times[arg_m, arg_j]
+    i = 0
+    for m, j in untackled_tasks:
+        if max(eom[m], eoj[j])+execution_times[m, j] < min_t:
+            arg_m = m
+            arg_j = j
+            min_t = max(eom[m], eoj[j])+execution_times[m, j]
             index = i
         i += 1
     return arg_m, arg_j, min_t, index
