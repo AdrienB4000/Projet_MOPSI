@@ -7,16 +7,6 @@ import csv
 import os
 import json
 
-# Quel format pour le poster, sur quel outil ?
-
-# A retenir
-# Faire tourner l'algo et faire un beau csv de résultat avec les
-# faire des stats sur les heuristiques
-# faire varier les paramètres de l'algo
-# ex d'applications : classe/profs
-# Poster : tracer des courbes de déviations, pseudo-code avec rpz de ce que donne les algos
-# Lire partie 5
-
 
 def merge_two_dicts(d1, d2):
     """adds d2 to d1"""
@@ -29,11 +19,12 @@ def merge_two_dicts(d1, d2):
             d1[key] = d2[key]
 
 
-instance_size = [(4, 4), (5, 5), (7, 7)]  # (15, 15)]  # , (20, 20)]
+#instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15)]
+instance_size = [(15, 15)]
 densities = ['LD', 'MD', 'HD']
 nb_instance = 10
 nb_graph = 10
-engine = 'FIFO'
+engine = 'ND'
 results = []
 this_dir = os.path.dirname(os.path.abspath(__file__))
 with open("parameters.json") as param:
@@ -83,7 +74,7 @@ for (nb_machine, nb_job) in instance_size:
               cumulated_function_times)
 
 print(results)
-with open('results'+engine+'_test.csv', 'w') as f:  # Just use 'w' mode in 3.x
+with open('results'+engine+'_15.csv', 'w') as f:  # Just use 'w' mode in 3.x
     w = csv.DictWriter(f, results[0].keys(), delimiter=";")
     w.writeheader()
     w.writerows(results)

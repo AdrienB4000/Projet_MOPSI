@@ -19,6 +19,7 @@ class Schedule:
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
         self.completion_time = 0
+        self.time2 = 0
         task_list = [(i, j) for i in range(nb_machines)
                      for j in range(nb_jobs)]
         if not (copying_list is None):
@@ -81,61 +82,14 @@ class Schedule:
         self.plot_graph(conflict_graph)
         show()
 
-    def nd_engine2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
-        #last_time = time.time()
-        eom = [0] * nb_machines
-        eoj = [0] * nb_jobs
-        untackled_tasks = self.schedule.copy()
-        while untackled_tasks:
-            # On parcourt la matrice C
-            # Pour toutes les taches non 0 sur C
-            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-            argmin_m, argmin_j, t, index = min_time(eom, eoj, untackled_tasks)
-            completion_time = t + execution_times[argmin_m, argmin_j]
-            self.completion_matrix[argmin_m, argmin_j] = completion_time
-            eom[argmin_m] = completion_time
-            eoj[argmin_j] = completion_time
-            for j in adjacency_list[argmin_j]:
-                eoj[j] = max(eoj[j], eoj[argmin_j])
-            untackled_tasks.pop(index)
-        #print("Temps dans le engine ND", time.time()-last_time)
-
-        # Version qui fonctionne mais un peu plus coûteuse :(
-        # untackled_tasks = self.schedule.copy()
-        # times = np.zeros((nb_machines, nb_jobs))
-        # while untackled_tasks:
-        #     (u, v) = arg_min_prio(times, untackled_tasks)  # (8 s)
-        #     t = times[u, v]
-        #     completion_time = t + execution_times[u, v]
-        #     self.completion_matrix[u, v] = completion_time
-        #     for j in range(nb_jobs):
-        #         times[u, j] = max(
-        #             completion_time, times[u, j])
-        #     for i in range(nb_machines):  # (12 s)
-        #         times[i, v] = max(
-        #             completion_time, times[i, v])
-        #         for j in adjacency_list[v]:
-        #             times[i, j] = max(
-        #                 times[i, j], completion_time)
-
-        #     times[u, v] = np.inf
-        #     untackled_tasks.remove((u, v))
-
+    # Voici la fonction qui prend 95 % du temps de l'algo
     def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
-        last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
-            # On parcourt la matrice C
-            # Pour toutes les taches non 0 sur C
-            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-<<<<<<< HEAD
             argmin_m, argmin_j, t, index = min_time_to_begin(
                 eom, eoj, untackled_tasks)
-=======
-            argmin_m, argmin_j, t, index = min_time_to_begin(eom, eoj, untackled_tasks)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
             completion_time = t + execution_times[argmin_m, argmin_j]
             self.completion_matrix[argmin_m, argmin_j] = completion_time
             eom[argmin_m] = completion_time
@@ -143,7 +97,6 @@ class Schedule:
             for j in adjacency_list[argmin_j]:
                 eoj[j] = max(eoj[j], eoj[argmin_j])
             untackled_tasks.pop(index)
-        #print("Temps dans le engine ND", time.time()-last_time)
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         # a modifier de la même façon
@@ -151,14 +104,11 @@ class Schedule:
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
+
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
-<<<<<<< HEAD
             argmin_m, argmin_j, t, index = min_time_to_finish(
                 eom, eoj, untackled_tasks, execution_times)
-=======
-            argmin_m, argmin_j, t, index = min_time_to_finish(eom, eoj, untackled_tasks, execution_times)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
             index = 0
             for i, j in untackled_tasks:
                 if eom[i] <= t and eoj[j] <= t:
@@ -249,9 +199,6 @@ class Schedule:
         if engine == "ND":
             self.nd_engine(nb_jobs, nb_machines,
                            execution_times, adjacency_list)
-        if engine == "ND2":
-            self.nd_engine_2(nb_jobs, nb_machines,
-                             execution_times, adjacency_list)
         if engine == "FIFO":
             self.fifo_engine(nb_jobs, nb_machines,
                              execution_times, adjacency_list)
@@ -259,12 +206,8 @@ class Schedule:
             self.giffler_engine(nb_jobs, nb_machines,
                                 execution_times, adjacency_list)
         if engine == "ANCIEN_GIFFLER":
-            self.ancien_giffler_engine(nb_jobs, nb_machines,
-<<<<<<< HEAD
-                                       execution_times, adjacency_list)
-=======
-                                execution_times, adjacency_list)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
+            self.ancien_giffler_engine(
+                nb_jobs, nb_machines, execution_times, adjacency_list)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, adjacency_list, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
@@ -373,7 +316,6 @@ if __name__ == "__main__":
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
     job_times = execution_times.sum(axis=0)
     clique_max = max_weight_clique(conflict_graph, list(job_times))
-<<<<<<< HEAD
     s = Schedule(nb_jobs, nb_machines, execution_times,
                  adjacency_list, "GIFFLER")
     s2 = Schedule(nb_jobs, nb_machines, execution_times,
@@ -382,9 +324,3 @@ if __name__ == "__main__":
                 lower_bound_calculus(execution_times, clique_max))
     s2.visualize(execution_times, conflict_graph,
                  lower_bound_calculus(execution_times, clique_max))
-=======
-    s = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "GIFFLER")
-    s2 = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ANCIEN_GIFFLER")
-    s.visualize(execution_times, conflict_graph, lower_bound_calculus(execution_times, clique_max))
-    s2.visualize(execution_times, conflict_graph, lower_bound_calculus(execution_times, clique_max))
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
