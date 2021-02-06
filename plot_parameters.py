@@ -20,18 +20,19 @@ def merge_two_dicts(d1, d2):
             d1[key] = d2[key]
 
 
-def plot_parameters(parameters_file, col):
+def plot_parameters(parameters_file, col, ax1, ax2):
     # , (15, 15)]  # , (20, 20)]
-    instance_size = [(4, 4), (5, 5)]  # , (7, 7), (10, 10)]
+    instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15)]  # , (20, 20)]
     densities = ['LD', 'MD', 'HD']
     nb_instance = 5
-    nb_graph = 2
+    nb_graph = 5
     engine = 'ND'
     results = []
+    times = []
     this_dir = os.path.dirname(os.path.abspath(__file__))
     with open(parameters_file) as param:
         parameters = json.load(param)
-
+    mutation_probability = parameters["mutation_probability"]
     for (nb_machine, nb_job) in instance_size:
         lb_deviation = []
         execution_time = []
@@ -50,12 +51,20 @@ def plot_parameters(parameters_file, col):
                     lb_deviation.append(
                         (optimal_schedule.Cmax-lower_bound)/lower_bound)
         results.append(np.mean(lb_deviation))
-    plt.scatter([i[0] for i in instance_size], results, color=col)
+        times.append(np.mean(execution_time))
+    ax1.scatter([i[0] for i in instance_size], results, color=col)
+    ax2.scatter([i[0] for i in instance_size], times, color=col, label="p = "+str(mutation_probability))
 
 
 if __name__ == "__main__":
+    ax1 = plt.subplot(121)
+    ax1.set_title("La déviation à la borne inférieure")
+    ax2 = plt.subplot(122)
+    ax2.set_title("Temps d'éxecution")
     couleurs = ['b', 'g', 'r', 'y', 'b', 'c', 'm']
     for i in range(1, 6):
+        print("On passe au traitement du fichier ", i, "\n \n")
         parameters_file = 'parameters'+str(i)+'.json'
-        plot_parameters(parameters_file, couleurs[i])
+        plot_parameters(parameters_file, couleurs[i], ax1, ax2)
+    plt.legend()
     plt.show()

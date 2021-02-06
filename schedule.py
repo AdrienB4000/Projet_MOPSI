@@ -82,6 +82,7 @@ class Schedule:
         show()
 
     def nd_engine2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
+        print("ND2")
         #last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
@@ -130,12 +131,8 @@ class Schedule:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-<<<<<<< HEAD
             argmin_m, argmin_j, t, index = min_time_to_begin(
                 eom, eoj, untackled_tasks)
-=======
-            argmin_m, argmin_j, t, index = min_time_to_begin(eom, eoj, untackled_tasks)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
             completion_time = t + execution_times[argmin_m, argmin_j]
             self.completion_matrix[argmin_m, argmin_j] = completion_time
             eom[argmin_m] = completion_time
@@ -153,12 +150,8 @@ class Schedule:
         while untackled_tasks:
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
-<<<<<<< HEAD
             argmin_m, argmin_j, t, index = min_time_to_finish(
                 eom, eoj, untackled_tasks, execution_times)
-=======
-            argmin_m, argmin_j, t, index = min_time_to_finish(eom, eoj, untackled_tasks, execution_times)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
             index = 0
             for i, j in untackled_tasks:
                 if eom[i] <= t and eoj[j] <= t:
@@ -260,11 +253,7 @@ class Schedule:
                                 execution_times, adjacency_list)
         if engine == "ANCIEN_GIFFLER":
             self.ancien_giffler_engine(nb_jobs, nb_machines,
-<<<<<<< HEAD
                                        execution_times, adjacency_list)
-=======
-                                execution_times, adjacency_list)
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, adjacency_list, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
@@ -373,7 +362,6 @@ if __name__ == "__main__":
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
     job_times = execution_times.sum(axis=0)
     clique_max = max_weight_clique(conflict_graph, list(job_times))
-<<<<<<< HEAD
     s = Schedule(nb_jobs, nb_machines, execution_times,
                  adjacency_list, "GIFFLER")
     s2 = Schedule(nb_jobs, nb_machines, execution_times,
@@ -382,9 +370,3 @@ if __name__ == "__main__":
                 lower_bound_calculus(execution_times, clique_max))
     s2.visualize(execution_times, conflict_graph,
                  lower_bound_calculus(execution_times, clique_max))
-=======
-    s = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "GIFFLER")
-    s2 = Schedule(nb_jobs, nb_machines, execution_times, adjacency_list, "ANCIEN_GIFFLER")
-    s.visualize(execution_times, conflict_graph, lower_bound_calculus(execution_times, clique_max))
-    s2.visualize(execution_times, conflict_graph, lower_bound_calculus(execution_times, clique_max))
->>>>>>> 6be77075dc1c81a8f1118ce1b4ca0c4f598d4cdb
