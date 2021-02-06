@@ -32,6 +32,7 @@ def principal_loop(instance_file, parameters, engine='ND'):
 
     conflict_graph = nx.from_numpy_matrix(
         np.array(instance["graph"]["adjacency_matrix"]))
+    density = instance["graph"]["edge_probability"]
     adjacency_list = [list(conflict_graph.adj[i]) for i in range(nb_jobs)]
     function_times['instance'] = time.time()-last_time
     last_time = time.time()
@@ -50,7 +51,7 @@ def principal_loop(instance_file, parameters, engine='ND'):
     function_times['init_population'] = time.time() - last_time
     last_time = time.time()
     nb_schedule = len(initial_population.population)
-    iteration_number = 60*nb_schedule*max(nb_machines, nb_jobs)
+    iteration_number = 10*(1-density)*nb_schedule*max(nb_machines, nb_jobs)
     max_constant_iterations = iteration_number/10
     iteration = 0
     compteur = 0

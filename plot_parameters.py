@@ -22,7 +22,8 @@ def merge_two_dicts(d1, d2):
 
 def plot_parameters(parameters_file, col, ax1, ax2):
     # , (15, 15)]  # , (20, 20)]
-    instance_size = [(4, 4), (5, 5), (7, 7), (10, 10), (15, 15)]  # , (20, 20)]
+    # , (15, 15)]  # , (20, 20)]
+    instance_size = [(4, 4), (5, 5), (7, 7), (10, 10)]
     densities = ['LD', 'MD', 'HD']
     nb_instance = 5
     nb_graph = 5
@@ -53,7 +54,12 @@ def plot_parameters(parameters_file, col, ax1, ax2):
         results.append(np.mean(lb_deviation))
         times.append(np.mean(execution_time))
     ax1.scatter([i[0] for i in instance_size], results, color=col)
-    ax2.scatter([i[0] for i in instance_size], times, color=col, label="p = "+str(mutation_probability))
+    if parameters["insert_sorted"]:
+        ax2.scatter([i[0] for i in instance_size], times,
+                    color=col, label="inserted sorted")
+    else:
+        ax2.scatter([i[0] for i in instance_size], times,
+                    color=col, label="no inserted sorted")
 
 
 if __name__ == "__main__":
@@ -62,7 +68,7 @@ if __name__ == "__main__":
     ax2 = plt.subplot(122)
     ax2.set_title("Temps d'éxecution")
     couleurs = ['b', 'g', 'r', 'y', 'b', 'c', 'm']
-    for i in range(1, 6):
+    for i in range(1, 3):
         print("On passe au traitement du fichier ", i, "\n \n")
         parameters_file = 'parameters'+str(i)+'.json'
         plot_parameters(parameters_file, couleurs[i], ax1, ax2)
