@@ -100,10 +100,11 @@ def principal_loop(instance_file, parameters, engine='ND'):
     print('\n Compteur : ', compteur, " Iteration : ",
           iteration, " Nombre d'itération maximal : ", iteration_number)
     print(function_times)
-    #print("Temps de calcul total de C : ", initial_population.completion_time)
+    print("Temps de calcul total de C : ", initial_population.completion_time)
     return (initial_population, lower_bound, function_times)
 
 
+# test pour une instance aléatoire
 if __name__ == "__main__":
     with open("parameters.json") as param:
         parameters = json.load(param)
@@ -112,8 +113,6 @@ if __name__ == "__main__":
     (final_pop, lower_bound, function_times) = principal_loop(
         instance_path, parameters, "ND")
     optimal_schedule = final_pop.population[len(final_pop.population) - 1]
-    # print("La valeur optimale trouvée est l'emploi du temps :")
-    # print(optimal_schedule)
     print("Dont le temps d'éxecution vaut : " + str(optimal_schedule.Cmax))
     print("Avec une borne inférieure de : " + str(lower_bound))
     with open(instance_path) as inst:

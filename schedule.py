@@ -19,6 +19,7 @@ class Schedule:
         """If not this schedule is sorted if a sort_function is given"""
         """else this schedule is randomly sorted"""
         self.completion_time = 0
+        self.time2 = 0
         task_list = [(i, j) for i in range(nb_machines)
                      for j in range(nb_jobs)]
         if not (copying_list is None):
@@ -81,56 +82,12 @@ class Schedule:
         self.plot_graph(conflict_graph)
         show()
 
-    def nd_engine2(self, nb_jobs, nb_machines, execution_times, adjacency_list):
-        print("ND2")
-        #last_time = time.time()
-        eom = [0] * nb_machines
-        eoj = [0] * nb_jobs
-        untackled_tasks = self.schedule.copy()
-        while untackled_tasks:
-            # On parcourt la matrice C
-            # Pour toutes les taches non 0 sur C
-            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
-            argmin_m, argmin_j, t, index = min_time(eom, eoj, untackled_tasks)
-            completion_time = t + execution_times[argmin_m, argmin_j]
-            self.completion_matrix[argmin_m, argmin_j] = completion_time
-            eom[argmin_m] = completion_time
-            eoj[argmin_j] = completion_time
-            for j in adjacency_list[argmin_j]:
-                eoj[j] = max(eoj[j], eoj[argmin_j])
-            untackled_tasks.pop(index)
-        #print("Temps dans le engine ND", time.time()-last_time)
-
-        # Version qui fonctionne mais un peu plus coûteuse :(
-        # untackled_tasks = self.schedule.copy()
-        # times = np.zeros((nb_machines, nb_jobs))
-        # while untackled_tasks:
-        #     (u, v) = arg_min_prio(times, untackled_tasks)  # (8 s)
-        #     t = times[u, v]
-        #     completion_time = t + execution_times[u, v]
-        #     self.completion_matrix[u, v] = completion_time
-        #     for j in range(nb_jobs):
-        #         times[u, j] = max(
-        #             completion_time, times[u, j])
-        #     for i in range(nb_machines):  # (12 s)
-        #         times[i, v] = max(
-        #             completion_time, times[i, v])
-        #         for j in adjacency_list[v]:
-        #             times[i, j] = max(
-        #                 times[i, j], completion_time)
-
-        #     times[u, v] = np.inf
-        #     untackled_tasks.remove((u, v))
-
+    # Voici la fonction qui prend 95 % du temps de l'algo
     def nd_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
-        last_time = time.time()
         eom = [0] * nb_machines
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
-            # On parcourt la matrice C
-            # Pour toutes les taches non 0 sur C
-            # à modifier, ne pas stocker de liste, faire une fonction qui récupère index et max(eom[i],eoj[j])
             argmin_m, argmin_j, t, index = min_time_to_begin(
                 eom, eoj, untackled_tasks)
             completion_time = t + execution_times[argmin_m, argmin_j]
@@ -140,7 +97,6 @@ class Schedule:
             for j in adjacency_list[argmin_j]:
                 eoj[j] = max(eoj[j], eoj[argmin_j])
             untackled_tasks.pop(index)
-        #print("Temps dans le engine ND", time.time()-last_time)
 
     def giffler_engine(self, nb_jobs, nb_machines, execution_times, adjacency_list):
         # a modifier de la même façon
@@ -148,6 +104,7 @@ class Schedule:
         eoj = [0] * nb_jobs
         untackled_tasks = self.schedule.copy()
         while untackled_tasks:
+
             # On parcourt la matrice C
             # Pour toutes les taches non 0 sur C
             argmin_m, argmin_j, t, index = min_time_to_finish(
@@ -242,9 +199,6 @@ class Schedule:
         if engine == "ND":
             self.nd_engine(nb_jobs, nb_machines,
                            execution_times, adjacency_list)
-        if engine == "ND2":
-            self.nd_engine_2(nb_jobs, nb_machines,
-                             execution_times, adjacency_list)
         if engine == "FIFO":
             self.fifo_engine(nb_jobs, nb_machines,
                              execution_times, adjacency_list)
@@ -252,8 +206,8 @@ class Schedule:
             self.giffler_engine(nb_jobs, nb_machines,
                                 execution_times, adjacency_list)
         if engine == "ANCIEN_GIFFLER":
-            self.ancien_giffler_engine(nb_jobs, nb_machines,
-                                       execution_times, adjacency_list)
+            self.ancien_giffler_engine(
+                nb_jobs, nb_machines, execution_times, adjacency_list)
 
     def crossover_lox(self, nb_jobs, nb_machines, execution_times, adjacency_list, engine, second_parent):
         """returns the child which is the crossover between self and second parent by the lox method"""
